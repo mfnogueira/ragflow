@@ -1,0 +1,570 @@
+# RabbitMQ Message Schemas
+# Defines message formats for all queues in the RAG Q&A System
+
+version: "1.0"
+description: |
+  Message schemas for RabbitMQ queues used in the RAG Q&A System.
+  All messages are JSON-encoded with UTF-8.
+  All timestamps are ISO 8601 format in UTC.
+
+queues:
+  ingest_queue:
+    description: Document ingestion requests
+    routing_key: "ingest.document"
+    durability: true
+    priority: false
+    message_ttl_ms: 3600000  # 1 hour
+    max_length: 10000
+    dead_letter_exchange: "failed_exchange"
+
+  embed_queue:
+    description: Embedding generation tasks
+    routing_key: "embed.chunks"
+    durability: true
+    priority: true  # Higher priority for user-triggered re-indexing
+    message_ttl_ms: 7200000  # 2 hours
+    max_length: 50000
+    dead_letter_exchange: "failed_exchange"
+
+  query_queue:
+    description: User query processing requests
+    routing_key: "query.user"
+    durability: true
+    priority: false
+    message_ttl_ms: 300000  # 5 minutes (user-facing, short timeout)
+    max_length: 20000
+    dead_letter_exchange: "failed_exchange"
+
+  audit_queue:
+    description: Audit events for compliance logging
+    routing_key: "audit.event"
+    durability: true
+    priority: false
+    message_ttl_ms: null  # No expiration
+    max_length: 100000
+    dead_letter_exchange: null  # Audit events are never discarded
+
+message_schemas:
+  IngestDocumentMessage:
+    description: Request to ingest a document into the knowledge base
+    queue: ingest_queue
+    routing_key: "ingest.document"
+    schema:
+      type: object
+      required:
+        - message_id
+        - document_id
+        - file_path
+        - collection_name
+        - timestamp
+      properties:
+        message_id:
+          type: string
+          format: uuid
+          description: Unique message identifier (idempotency key)
+        document_id:
+          type: string
+          format: uuid
+          description: Document entity ID (already created in DB)
+        file_path:
+          type: string
+          description: Path to uploaded file (S3 URI or local filesystem)
+          example: "s3://ragflow-uploads/olist_reviews.csv"
+        file_name:
+          type: string
+          description: Original file name
+          example: "olist_order_reviews_dataset.csv"
+        file_format:
+          type: string
+          enum: [CSV, PDF, DOCX, TXT, MD]
+          description: File format
+        collection_name:
+          type: string
+          description: Target collection for vectors
+          example: "olist_reviews"
+        metadata:
+          type: object
+          description: Custom metadata to attach to document
+          example:
+            source: "kaggle"
+            uploader_id: "admin"
+        timestamp:
+          type: string
+          format: date-time
+          description: Message creation timestamp (ISO 8601 UTC)
+        trace_id:
+          type: string
+          description: Distributed tracing trace ID
+        retry_count:
+          type: integer
+          description: Number of times this message has been retried
+          default: 0
+    example:
+      message_id: "msg_abc123"
+      document_id: "550e8400-e29b-41d4-a716-446655440000"
+      file_path: "s3://ragflow-uploads/olist_reviews.csv"
+      file_name: "olist_order_reviews_dataset.csv"
+      file_format: "CSV"
+      collection_name: "olist_reviews"
+      metadata:
+        source: "kaggle"
+        dataset_version: "1.0"
+      timestamp: "2025-11-13T10:30:00Z"
+      trace_id: "4bf92f3577b34da6a3ce929d0e0e4736"
+      retry_count: 0
+
+  EmbedChunksMessage:
+    description: Request to generate embeddings for document chunks
+    queue: embed_queue
+    routing_key: "embed.chunks"
+    schema:
+      type: object
+      required:
+        - message_id
+        - embedding_job_id
+        - chunk_ids
+        - timestamp
+      properties:
+        message_id:
+          type: string
+          format: uuid
+          description: Unique message identifier
+        embedding_job_id:
+          type: string
+          format: uuid
+          description: EmbeddingJob entity ID
+        document_id:
+          type: string
+          format: uuid
+          description: Parent document ID
+        chunk_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: List of chunk IDs to embed (batch)
+          minItems: 1
+          maxItems: 100
+        collection_name:
+          type: string
+          description: Target collection for vectors
+          example: "olist_reviews"
+        embedding_model:
+          type: string
+          description: Embedding model to use
+          default: "text-embedding-3-small"
+          example: "text-embedding-3-small"
+        batch_size:
+          type: integer
+          description: Chunks per API call
+          default: 100
+        timestamp:
+          type: string
+          format: date-time
+        trace_id:
+          type: string
+        retry_count:
+          type: integer
+          default: 0
+    example:
+      message_id: "msg_def456"
+      embedding_job_id: "bb0e8400-e29b-41d4-a716-446655440006"
+      document_id: "550e8400-e29b-41d4-a716-446655440000"
+      chunk_ids:
+        - "660e8400-e29b-41d4-a716-446655440001"
+        - "660e8400-e29b-41d4-a716-446655440002"
+        - "... (98 more)"
+      collection_name: "olist_reviews"
+      embedding_model: "text-embedding-3-small"
+      batch_size: 100
+      timestamp: "2025-11-13T10:35:00Z"
+      trace_id: "4bf92f3577b34da6a3ce929d0e0e4736"
+      retry_count: 0
+
+  ProcessQueryMessage:
+    description: Request to process a user query (retrieve + generate answer)
+    queue: query_queue
+    routing_key: "query.user"
+    schema:
+      type: object
+      required:
+        - message_id
+        - query_id
+        - query_text
+        - timestamp
+      properties:
+        message_id:
+          type: string
+          format: uuid
+          description: Unique message identifier
+        query_id:
+          type: string
+          format: uuid
+          description: Query entity ID (already created in DB)
+        query_text:
+          type: string
+          description: User's natural language question
+          minLength: 1
+          maxLength: 1000
+          example: "Quais são os principais motivos de avaliações negativas?"
+        user_id:
+          type: string
+          description: User identifier (optional)
+          example: "user_12345"
+        session_id:
+          type: string
+          description: Session correlation ID (optional)
+          example: "sess_abc123"
+        options:
+          type: object
+          description: Query processing options
+          properties:
+            collection_filter:
+              type: array
+              items:
+                type: string
+              description: Restrict search to specific collections
+              example: ["olist_reviews"]
+            max_chunks:
+              type: integer
+              description: Maximum chunks to retrieve
+              default: 10
+              minimum: 1
+              maximum: 20
+            enable_reranking:
+              type: boolean
+              description: Enable cross-encoder reranking
+              default: false
+            llm_model:
+              type: string
+              description: LLM model to use for generation
+              default: "gpt-4o-mini"
+              enum: ["gpt-4o-mini", "gpt-4o"]
+        timestamp:
+          type: string
+          format: date-time
+        trace_id:
+          type: string
+        retry_count:
+          type: integer
+          default: 0
+    example:
+      message_id: "msg_ghi789"
+      query_id: "770e8400-e29b-41d4-a716-446655440002"
+      query_text: "Quais são os principais motivos de avaliações negativas?"
+      user_id: "user_12345"
+      session_id: "sess_abc123"
+      options:
+        collection_filter: ["olist_reviews"]
+        max_chunks: 10
+        enable_reranking: false
+        llm_model: "gpt-4o-mini"
+      timestamp: "2025-11-13T14:22:30Z"
+      trace_id: "7ef92f3577b34da6a3ce929d0e0e4999"
+      retry_count: 0
+
+  AuditEventMessage:
+    description: Audit event for compliance logging
+    queue: audit_queue
+    routing_key: "audit.event"
+    schema:
+      type: object
+      required:
+        - event_id
+        - event_type
+        - timestamp
+        - actor
+        - affected_entity_type
+        - affected_entity_id
+        - severity_level
+      properties:
+        event_id:
+          type: string
+          format: uuid
+          description: Unique event identifier (maps to AuditEvent.id)
+        event_type:
+          type: string
+          enum:
+            - ingestion
+            - query
+            - escalation
+            - validation_failure
+            - pii_detection
+            - cache_hit
+            - rate_limit_exceeded
+            - authentication_failure
+          description: Type of audit event
+        timestamp:
+          type: string
+          format: date-time
+          description: Event timestamp (ISO 8601 UTC with milliseconds)
+        actor:
+          type: string
+          description: User ID or system component name
+          example: "user_12345" or "query-worker-03"
+        affected_entity_type:
+          type: string
+          enum: [document, query, chunk, answer, escalation_request]
+          description: Type of entity affected by this event
+        affected_entity_id:
+          type: string
+          format: uuid
+          description: ID of affected entity
+        severity_level:
+          type: string
+          enum: [info, warning, error, critical]
+          description: Event severity
+        event_metadata:
+          type: object
+          description: Event-specific data (flexible schema)
+          # Schema varies by event_type - examples below
+        trace_id:
+          type: string
+          description: Distributed tracing trace ID
+        span_id:
+          type: string
+          description: Distributed tracing span ID
+    examples:
+      pii_detection:
+        event_id: "cc0e8400-e29b-41d4-a716-446655440007"
+        event_type: "pii_detection"
+        timestamp: "2025-11-13T10:35:11.234Z"
+        actor: "ingest-worker-01"
+        affected_entity_type: "chunk"
+        affected_entity_id: "660e8400-e29b-41d4-a716-446655440001"
+        severity_level: "warning"
+        event_metadata:
+          pii_type: "email"
+          pattern_matched: "[REDACTED_EMAIL]"
+          original_char_offset: 5280
+          redaction_applied: true
+        trace_id: "4bf92f3577b34da6a3ce929d0e0e4736"
+        span_id: "00f067aa0ba902b7"
+
+      validation_failure:
+        event_id: "dd0e8400-e29b-41d4-a716-446655440008"
+        event_type: "validation_failure"
+        timestamp: "2025-11-13T14:22:32.567Z"
+        actor: "query-worker-05"
+        affected_entity_type: "answer"
+        affected_entity_id: "990e8400-e29b-41d4-a716-446655440004"
+        severity_level: "warning"
+        event_metadata:
+          validation_type: "hallucination_check"
+          failure_reason: "Answer contains claims not grounded in retrieved context"
+          confidence_score: 0.42
+          action_taken: "flagged_for_escalation"
+        trace_id: "7ef92f3577b34da6a3ce929d0e0e4999"
+        span_id: "11f067aa0ba902b8"
+
+      rate_limit_exceeded:
+        event_id: "ee0e8400-e29b-41d4-a716-446655440009"
+        event_type: "rate_limit_exceeded"
+        timestamp: "2025-11-13T15:00:00.123Z"
+        actor: "user_99999"
+        affected_entity_type: "query"
+        affected_entity_id: null
+        severity_level: "warning"
+        event_metadata:
+          limit_type: "queries_per_hour"
+          limit_value: 100
+          current_count: 101
+          window_start: "2025-11-13T14:00:00Z"
+          action_taken: "request_blocked"
+        trace_id: null
+        span_id: null
+
+event_metadata_schemas:
+  # Event-specific metadata schemas
+  pii_detection:
+    type: object
+    required:
+      - pii_type
+      - redaction_applied
+    properties:
+      pii_type:
+        type: string
+        enum: [cpf, email, phone, credit_card]
+      pattern_matched:
+        type: string
+        description: Redacted representation
+      original_char_offset:
+        type: integer
+        description: Character position in original text
+      redaction_applied:
+        type: boolean
+
+  validation_failure:
+    type: object
+    required:
+      - validation_type
+      - failure_reason
+    properties:
+      validation_type:
+        type: string
+        enum: [hallucination_check, pii_leakage, policy_compliance, coherence]
+      failure_reason:
+        type: string
+      confidence_score:
+        type: number
+        format: float
+      action_taken:
+        type: string
+        enum: [flagged_for_escalation, blocked, regenerated]
+
+  query:
+    type: object
+    required:
+      - query_text
+      - latency_ms
+    properties:
+      query_text:
+        type: string
+      answer_text:
+        type: string
+      confidence_score:
+        type: number
+        format: float
+      latency_ms:
+        type: integer
+      cache_hit:
+        type: boolean
+
+  ingestion:
+    type: object
+    required:
+      - file_name
+      - processing_duration_seconds
+    properties:
+      file_name:
+        type: string
+      file_size_bytes:
+        type: integer
+      chunk_count:
+        type: integer
+      processing_duration_seconds:
+        type: integer
+      error_message:
+        type: string
+
+  escalation:
+    type: object
+    required:
+      - escalation_reason
+      - confidence_score
+    properties:
+      escalation_reason:
+        type: string
+        enum: [low_confidence, validation_failure, user_request]
+      confidence_score:
+        type: number
+        format: float
+      assigned_agent_id:
+        type: string
+
+consumer_guidelines:
+  acknowledgment:
+    description: |
+      All consumers MUST acknowledge messages after successful processing.
+      Failed messages should be rejected (negatively acknowledged) to trigger retry or DLQ routing.
+
+    success:
+      - "Process message successfully"
+      - "Ack message (channel.basic_ack)"
+
+    failure:
+      - "Catch exception during processing"
+      - "Log error with trace_id"
+      - "Nack message with requeue=false (channel.basic_nack)"
+      - "Message moves to dead-letter queue after max retries"
+
+  idempotency:
+    description: |
+      All consumers MUST implement idempotency using message_id.
+      Check if message_id was already processed before starting work.
+
+    implementation:
+      - "Query cache/DB for message_id"
+      - "If found: ack immediately (already processed)"
+      - "If not found: process message, store message_id, ack"
+
+  tracing:
+    description: |
+      All consumers MUST propagate distributed tracing context.
+      Extract trace_id from message, continue span, inject into downstream calls.
+
+    implementation:
+      - "Extract trace_id from message"
+      - "Create child span with current operation name"
+      - "Propagate trace_id to DB queries, API calls, etc."
+      - "End span after processing"
+
+  error_handling:
+    description: |
+      Consumers MUST implement exponential backoff for transient failures.
+      Permanent failures (validation errors) should move to DLQ immediately.
+
+    transient_failures:
+      - "Network errors (Qdrant, OpenAI API, RabbitMQ)"
+      - "Rate limits (LLM API)"
+      - "Temporary resource exhaustion"
+      - "Action: Nack with requeue=true, RabbitMQ retries with delay"
+
+    permanent_failures:
+      - "Invalid message schema"
+      - "Missing required fields"
+      - "Referenced entity not found"
+      - "Action: Nack with requeue=false, move to DLQ"
+
+  concurrency:
+    description: |
+      Consumers SHOULD process messages concurrently for throughput.
+      Prefetch count controls how many unacknowledged messages per worker.
+
+    recommended_prefetch:
+      - "Embed workers: prefetch_count=5 (I/O-bound)"
+      - "Query workers: prefetch_count=10 (mixed)"
+      - "Ingest workers: prefetch_count=3 (memory-intensive)"
+
+dead_letter_queue:
+  name: "failed_queue"
+  description: |
+    Failed messages from all queues are routed to failed_queue for manual inspection.
+    Messages in DLQ should be reviewed, fixed (if possible), and re-queued or discarded.
+
+  message_ttl_ms: 604800000  # 7 days
+
+  inspection_process:
+    - "Fetch message from failed_queue"
+    - "Review error context in message headers (x-death, x-exception)"
+    - "Determine root cause (bug, transient failure, invalid input)"
+    - "Fix data/code if needed"
+    - "Re-publish to original queue with retry_count reset"
+    - "Or discard if unrecoverable"
+
+monitoring:
+  prometheus_metrics:
+    - rabbitmq_queue_messages_ready (gauge, by queue)
+    - rabbitmq_queue_messages_unacked (gauge, by queue)
+    - rabbitmq_queue_consumers (gauge, by queue)
+    - rabbitmq_message_publish_total (counter, by routing_key)
+    - rabbitmq_message_deliver_total (counter, by queue)
+    - rabbitmq_message_ack_total (counter, by queue)
+    - rabbitmq_message_nack_total (counter, by queue)
+    - rabbitmq_message_redelivered_total (counter, by queue)
+
+  alerts:
+    - name: "HighQueueDepth"
+      condition: "rabbitmq_queue_messages_ready{queue='query_queue'} > 1000"
+      severity: "warning"
+      action: "Scale up query workers"
+
+    - name: "NoConsumers"
+      condition: "rabbitmq_queue_consumers{queue=~'.*'} == 0"
+      severity: "critical"
+      action: "Workers are down, restart pods"
+
+    - name: "HighRedeliveryRate"
+      condition: "rate(rabbitmq_message_redelivered_total[5m]) > 10"
+      severity: "warning"
+      action: "Investigate failing messages, check DLQ"
