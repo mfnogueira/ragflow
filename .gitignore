@@ -12,6 +12,7 @@ eggs/
 .eggs/
 lib/
 lib64/
+!src/lib/
 parts/
 sdist/
 var/
@@ -82,3 +83,8 @@ docker-compose.override.yml
 # Kubernetes
 k8s/secrets/*.yaml
 !k8s/secrets/*.yaml.template
+
+
+.claude
+.specify
+specs/
