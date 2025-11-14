@@ -375,3 +375,69 @@ class DocumentRepository:
         except Exception as e:
             logger.error(f"Failed to count chunks for document {document_id}: {e}")
             raise DatabaseError(f"Chunk count query failed: {e}")
+
+    # Helper methods for API layer
+    def create(
+        self,
+        document_id: str,
+        content: str,
+        source: str,
+        collection: str,
+        metadata: dict = None,
+    ) -> Any:
+        """
+        Simplified create method for API layer.
+
+        Note: This is a temporary wrapper. The actual implementation should use
+        proper document processing with chunking.
+        """
+        from src.models.document import DocumentCreate, FileFormat
+
+        # For now, create a minimal document
+        # TODO: Implement proper document processing pipeline
+        doc_create = DocumentCreate(
+            file_name=source,
+            file_format=FileFormat.TXT,
+            file_size_bytes=len(content.encode('utf-8')),
+            collection_name=collection,
+            metadata=metadata or {},
+        )
+
+        # Create a simple namespace object to return
+        class SimpleDoc:
+            def __init__(self, id, source, collection, status, chunk_count, created_at, metadata):
+                self.id = id
+                self.source = source
+                self.collection = collection
+                self.status = status
+                self.chunk_count = chunk_count
+                self.created_at = created_at
+                self.metadata = metadata
+
+        from datetime import datetime
+        from src.models.document import ProcessingStatus
+
+        return SimpleDoc(
+            id=document_id,
+            source=source,
+            collection=collection,
+            status=ProcessingStatus.PENDING,
+            chunk_count=0,
+            created_at=datetime.utcnow(),
+            metadata=metadata or {},
+        )
+
+    def get_by_id(self, document_id: str) -> Any:
+        """Get document by ID string (wrapper for get_document)."""
+        from uuid import UUID
+        return self.get_document(UUID(document_id))
+
+    def get_chunks(self, document_id: str) -> list:
+        """Get chunks by document ID string (wrapper for get_chunks_by_document)."""
+        from uuid import UUID
+        return self.get_chunks_by_document(UUID(document_id))
+
+    def delete(self, document_id: str) -> None:
+        """Delete document by ID string (wrapper for delete_document)."""
+        from uuid import UUID
+        return self.delete_document(UUID(document_id))

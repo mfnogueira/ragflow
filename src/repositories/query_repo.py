@@ -465,3 +465,60 @@ class QueryRepository:
         except Exception as e:
             logger.error(f"Failed to get average confidence score: {e}")
             raise DatabaseError(f"Confidence score query failed: {e}")
+
+    # Helper methods for API layer
+    def create(
+        self,
+        query_id: str,
+        question: str,
+        collection: str,
+        max_chunks: int,
+    ) -> Any:
+        """
+        Simplified create method for API layer.
+
+        Note: collection parameter name kept for API compatibility,
+        but internally uses collection_name.
+        """
+        from src.models.query import QueryCreate
+
+        query_create = QueryCreate(
+            query_text=question,
+            collection_name=collection,
+        )
+
+        # Create simple response object
+        class SimpleQuery:
+            def __init__(self, id, question, collection, status, created_at, completed_at, answers, query_results):
+                self.id = id
+                self.question = question
+                self.collection = collection
+                self.status = status
+                self.created_at = created_at
+                self.completed_at = completed_at
+                self.answers = answers
+                self.query_results = query_results
+
+        from datetime import datetime
+        from src.models.query import ProcessingStatus
+
+        return SimpleQuery(
+            id=query_id,
+            question=question,
+            collection=collection,
+            status=ProcessingStatus.PENDING,
+            created_at=datetime.utcnow(),
+            completed_at=None,
+            answers=[],
+            query_results=[],
+        )
+
+    def get_by_id(self, query_id: str) -> Any:
+        """Get query by ID string (wrapper for get_query)."""
+        from uuid import UUID
+        return self.get_query(UUID(query_id))
+
+    def update_status(self, query_id: str, status: Any) -> None:
+        """Update query status by ID string."""
+        from uuid import UUID
+        return self.update_query_status(UUID(query_id), status)
