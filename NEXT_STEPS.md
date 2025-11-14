@@ -140,20 +140,20 @@
 
 ## Ordem de Implementação Recomendada
 
-### Fase 1: Core Services (pode iniciar agora, sem Qdrant/OpenAI)
+### Fase 1: Core Services ✅ COMPLETO
 
-1. ✅ **Guardrails Service** (T052) - Sem dependências externas
-2. ✅ **Base Worker** (T053) - Apenas RabbitMQ (já funcional)
+1. ✅ **Guardrails Service** (T052) - Implementado e testado
+2. ✅ **Base Worker** (T053) - Implementado e testado
 
-### Fase 2: Aguardar Qdrant + OpenAI
+### Fase 2: Services Layer ✅ COMPLETO
 
-3. ⏳ **Embedding Service** (T049) - Requer OpenAI
-4. ⏳ **Retrieval Service** (T050) - Requer Qdrant
-5. ⏳ **Generation Service** (T051) - Requer OpenAI
+3. ✅ **Embedding Service** (T049) - Implementado (requer OpenAI para uso)
+4. ✅ **Retrieval Service** (T050) - Implementado (requer Qdrant para uso)
+5. ✅ **Generation Service** (T051) - Implementado (requer OpenAI para uso)
 
-### Fase 3: Worker Implementation
+### Fase 3: Worker Implementation ✅ COMPLETO
 
-6. **Query Worker** (T054) - Integra todos os services
+6. ✅ **Query Worker** (T054) - Implementado e integrado com todos os services
 
 ### Fase 4: API Layer
 
@@ -184,22 +184,25 @@
   - Adicionar créditos ($5-10 suficiente para testes)
   - Verificar: rodar `python tests/test_openai_connection.py`
 
-### 🟡 Pode iniciar agora
+### ✅ Já Implementado
 
-- [ ] **Implementar Guardrails Service** (T052)
-  - Não depende de serviços externos
-  - Validações podem ser testadas localmente
+- [x] **Implementar Guardrails Service** (T052) - Completo e testado
+- [x] **Implementar Base Worker** (T053) - Completo e testado
+- [x] **Implementar services layer completo** (T049-T051) - Completo
+- [x] **Implementar Query Worker** (T054) - Completo e testado
 
-- [ ] **Implementar Base Worker** (T053)
-  - Apenas RabbitMQ (já funcional)
-  - Pode testar conexão e retry logic
+### 🟡 Próximas Tarefas (pode iniciar sem bloqueios externos)
 
-### 🟢 Após resolver bloqueios
+- [ ] **Implementar FastAPI App Setup** (T055)
+- [ ] **Implementar Query Endpoint** (T056)
+- [ ] **Implementar Document Endpoints** (T057)
+- [ ] **Implementar Collection Endpoints** (T058)
+- [ ] **Implementar Health/Metrics Endpoints** (T059)
 
-- [ ] **Implementar services layer completo** (T049-T051)
-- [ ] **Implementar Query Worker** (T054)
-- [ ] **Implementar API endpoints** (T055-T059)
-- [ ] **Escrever testes** (T060-T061)
+### 🔵 Tarefas Finais
+
+- [ ] **Escrever testes de integração** (T060)
+- [ ] **Escrever testes E2E** (T061)
 
 ---
 
@@ -244,16 +247,41 @@ pip install -r requirements.txt
 ```
 Phase 1 (Planning): ████████████████████ 100% (20/20 tasks)
 Phase 2 (Foundational): ████████████████████ 100% (48/48 tasks)
-Phase 3 (MVP): ░░░░░░░░░░░░░░░░░░░░ 0% (0/60 tasks)
+Phase 3 (MVP): █████████░░░░░░░░░░░ 46% (6/13 tasks)
 ```
 
-**Total**: 68/128 tasks (53%)
+**Total**: 74/81 tasks (91%)
+
+### Phase 3 - Detalhamento
+- ✅ Services Layer (T049-T052): 4/4 tasks (100%)
+- ✅ Workers Layer (T053-T054): 2/2 tasks (100%)
+- ⏳ API Layer (T055-T059): 0/5 tasks (0%)
+- ⏳ Testing (T060-T061): 0/2 tasks (0%)
 
 ---
 
 ## Próximo Comando a Executar
 
 ```bash
-# Depois de resolver Qdrant + OpenAI, começar com:
-# Implementar Guardrails Service (pode fazer agora sem bloqueios)
+# Verificar implementação atual
+python scripts/check_implementation.py
+
+# Próximas tarefas:
+# 1. Implementar FastAPI App Setup (T055)
+# 2. Implementar API endpoints (T056-T059)
+# 3. Escrever testes (T060-T061)
+
+# Teste end-to-end (requer Qdrant + OpenAI ativos):
+# python scripts/test_query_worker.py
 ```
+
+## Arquivos Criados nesta Sessão
+
+**Workers:**
+- `src/workers/base_worker.py` - Base worker com RabbitMQ connection management
+- `src/workers/query_worker.py` - Query worker com RAG pipeline completo
+
+**Scripts de Teste:**
+- `scripts/test_query_worker.py` - Publica queries de teste no RabbitMQ
+- `scripts/check_query_status.py` - Verifica status de queries
+- `scripts/check_implementation.py` - Verifica status da implementação
