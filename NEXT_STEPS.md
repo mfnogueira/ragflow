@@ -1,287 +1,443 @@
-# Próximos Passos - ragFlow
+# ragFlow - Próximos Passos
 
-## Status Atual da Infraestrutura
-
-### ✅ Completado (Phase 2 - Foundational)
-
-1. **Supabase PostgreSQL** - Totalmente funcional
-   - 9 tabelas criadas via Alembic migrations
-   - Conexão via pooler (melhor performance)
-   - Collection padrão 'olist_reviews' criada
-
-2. **RabbitMQ CloudAMQP** - Totalmente funcional
-   - Conexão AMQPS com TLS
-   - Testado: declarar/deletar queues
-
-3. **Supabase REST API** - Totalmente funcional
-   - Projeto ativo e respondendo
-
-4. **Bibliotecas Compartilhadas** - 9 arquivos criados
-   - config.py, exceptions.py, logger.py
-   - database.py, queue.py, vector_db.py
-   - cache.py, observability.py
-
-5. **Modelos Pydantic** - 5 arquivos criados
-   - document.py, query.py, escalation.py
-   - audit.py, messages.py
-
-6. **Repositórios** - 4 arquivos criados
-   - document_repo.py, query_repo.py
-   - vector_repo.py, cache_repo.py
-
-### ⏳ Pendente - Requer Ação Manual
-
-1. **Qdrant Cloud** - Configurado mas inativo
-   - ❌ Status: 404 (cluster não ativado)
-   - 📍 Ação: Ativar cluster no dashboard
-   - 🔗 URL: https://cloud.qdrant.io
-   - 📝 Cluster ID: 740e442b-1289-489d-86da-dd4786839615
-
-2. **OpenAI API** - Configurado mas sem créditos
-   - ❌ Status: 429 (quota excedida)
-   - 📍 Ação: Adicionar créditos na conta OpenAI
-   - 🔗 URL: https://platform.openai.com/account/billing
-   - ✅ API Key: Configurada corretamente no .env
+> **Última atualização**: 2025-11-14
+> **Branch atual**: `001-rag-qa-system`
+> **Progresso geral**: 74/81 tasks (91%)
 
 ---
 
-## Phase 3 (MVP) - User Story 1: Query Order Review Insights
+## 📋 Resumo Executivo
 
-**Objetivo**: Implementar sistema RAG completo para consultas em reviews da Olist
+Sistema RAG (Retrieval-Augmented Generation) para análise de reviews da Olist usando:
+- **PostgreSQL** (Supabase) para armazenamento estruturado
+- **Qdrant Cloud** para busca vetorial semântica
+- **OpenAI** para embeddings e geração de respostas
+- **RabbitMQ** (CloudAMQP) para processamento assíncrono
+- **FastAPI** para API REST (em implementação)
 
-### Tarefas a Implementar (T049-T061)
+### Status Atual
+- ✅ **Phase 1** (Planning): 100% completo
+- ✅ **Phase 2** (Foundational): 100% completo
+- 🔄 **Phase 3** (MVP): 46% completo (6/13 tasks)
+  - ✅ Services Layer: 100%
+  - ✅ Workers Layer: 100%
+  - ⏳ API Layer: 0%
+  - ⏳ Testing: 0%
 
-#### 1. Services Layer (T049-T052)
+---
 
-**T049: Embedding Service** (`src/services/embedding_service.py`)
-- Gerar embeddings usando OpenAI text-embedding-3-small
-- Batching para otimização
-- Retry logic com backoff exponencial
-- Logging de métricas (tokens, latência)
+## 🚀 Como Retomar o Projeto
 
-**T050: Retrieval Service** (`src/services/retrieval_service.py`)
-- Busca semântica no Qdrant
-- Scoring e ranking de chunks
-- Reranking opcional
-- Cache de resultados
+### 1. Verificar Ambiente
 
-**T051: Generation Service** (`src/services/generation_service.py`)
-- Geração de respostas com gpt-4o-mini
-- Prompt engineering com contexto
-- Streaming de respostas
-- Detecção de baixa confiança para escalação
+```bash
+# Verificar status da implementação
+python scripts/check_implementation.py
 
-**T052: Guardrails Service** (`src/services/guardrails_service.py`)
-- Validação de tamanho de query
-- Detecção de PII (opcional)
-- Detecção de prompt injection
-- Rate limiting
+# Verificar migrations do banco
+alembic current
 
-#### 2. Workers Layer (T053-T054)
+# Ver status do git
+git status
+```
 
-**T053: Base Worker** (`src/workers/base_worker.py`)
-- Classe abstrata para workers RabbitMQ
-- Connection pooling
-- Retry logic
-- Error handling e dead letter queue
-- Graceful shutdown
+### 2. Próximas Tarefas a Implementar
 
-**T054: Query Worker** (`src/workers/query_worker.py`)
-- Consumir mensagens da queue 'queries'
-- Orquestrar: guardrails → retrieval → generation
-- Publicar resposta na queue 'answers'
-- Audit logging
+**API Layer (T055-T059)** - Estimativa: 4-6 horas
 
-#### 3. API Layer (T055-T059)
+Começar por:
+1. **FastAPI App Setup** (T055) - `src/api/app.py`
+2. **Query Endpoint** (T056) - `src/api/routes/query.py`
+3. **Document Endpoints** (T057) - `src/api/routes/documents.py`
+4. **Collection Endpoints** (T058) - `src/api/routes/collections.py`
+5. **Health/Metrics** (T059) - `src/api/routes/health.py`
+
+---
+
+## 📊 Progresso Detalhado
+
+### ✅ Completado (74 tasks)
+
+#### Phase 1: Planning (20/20 tasks)
+- Especificação completa do projeto
+- Arquitetura definida
+- Tasks mapeadas
+
+#### Phase 2: Foundational (48/48 tasks)
+
+**Infraestrutura:**
+- ✅ Supabase PostgreSQL configurado e funcional
+- ✅ RabbitMQ CloudAMQP configurado e funcional
+- ✅ Redis cache configurado
+- ⚠️ Qdrant Cloud configurado (requer ativação manual)
+- ⚠️ OpenAI API configurado (requer créditos)
+
+**Bibliotecas Compartilhadas (8 arquivos):**
+- `src/lib/config.py` - Pydantic Settings
+- `src/lib/exceptions.py` - Hierarquia de exceções
+- `src/lib/logger.py` - Logging estruturado JSON
+- `src/lib/database.py` - PostgreSQL connection pooling
+- `src/lib/queue.py` - RabbitMQ connection management
+- `src/lib/vector_db.py` - Qdrant client
+- `src/lib/cache.py` - Redis client
+- `src/lib/observability.py` - OpenTelemetry SDK
+
+**Modelos Pydantic (5 arquivos):**
+- `src/models/document.py` - Document, Chunk
+- `src/models/query.py` - Query, Answer, QueryResult
+- `src/models/escalation.py` - EscalationRequest
+- `src/models/audit.py` - AuditEvent
+- `src/models/messages.py` - RabbitMQ message schemas
+
+**Alembic Migrations (9 migrations):**
+- 001-009: Tabelas completas (documents, chunks, queries, answers, etc.)
+
+**Repositórios (4 arquivos):**
+- `src/repositories/document_repo.py` - CRUD documentos/chunks
+- `src/repositories/query_repo.py` - CRUD queries/answers
+- `src/repositories/vector_repo.py` - Operações Qdrant
+- `src/repositories/cache_repo.py` - Operações Redis
+
+**Dados de Teste:**
+- 30 reviews da Olist processados
+- 30 chunks no PostgreSQL
+- 30 vetores no Qdrant Cloud (quando ativado)
+
+#### Phase 3: MVP (6/13 tasks)
+
+**Services Layer (4/4 - 100%):**
+- ✅ `src/services/guardrails_service.py` - Validação e sanitização
+  - Validação de tamanho de query
+  - Detecção de SQL injection
+  - Detecção de prompt injection
+  - Testado e funcional
+
+- ✅ `src/services/embedding_service.py` - OpenAI embeddings
+  - text-embedding-3-small
+  - Batch processing
+  - Retry logic com exponential backoff
+  - Requer OpenAI credits para uso
+
+- ✅ `src/services/retrieval_service.py` - Busca semântica
+  - Integração Qdrant + PostgreSQL
+  - Ranking por similaridade
+  - Enriquecimento com metadados
+  - Requer Qdrant ativado para uso
+
+- ✅ `src/services/generation_service.py` - Geração de respostas
+  - gpt-4o-mini
+  - Prompt engineering em português
+  - Confidence scoring
+  - Requer OpenAI credits para uso
+
+**Workers Layer (2/2 - 100%):**
+- ✅ `src/workers/base_worker.py` - Base abstrato
+  - Connection pooling RabbitMQ
+  - Graceful shutdown (SIGINT/SIGTERM)
+  - Retry logic
+  - Message acknowledgment
+
+- ✅ `src/workers/query_worker.py` - Pipeline RAG completo
+  - Consome queue 'queries'
+  - Pipeline de 5 etapas:
+    1. Validação (Guardrails)
+    2. Embedding (OpenAI)
+    3. Retrieval (Qdrant)
+    4. Generation (OpenAI)
+    5. Storage (PostgreSQL)
+  - Confidence scoring
+  - Error handling completo
+
+**Scripts de Teste (3 arquivos):**
+- `scripts/check_implementation.py` - Verifica serviços/workers
+- `scripts/test_query_worker.py` - Publica queries de teste
+- `scripts/check_query_status.py` - Verifica status de queries
+
+### ⏳ Pendente (7 tasks)
+
+#### API Layer (5 tasks) - **PRÓXIMO FOCO**
 
 **T055: FastAPI App Setup** (`src/api/app.py`)
-- Configurar FastAPI application
-- CORS, middleware
+```python
+# Criar aplicação FastAPI com:
+- CORS middleware
 - Lifespan events (startup/shutdown)
-- Health checks
+- Exception handlers
+- Request/response logging
+- Dependency injection (DB, services)
+```
 
-**T056: Query Endpoint** (`src/api/routes/query.py`)
-- POST /api/v1/query - Consulta síncrona
-- POST /api/v1/query/async - Consulta assíncrona
-- GET /api/v1/query/{query_id} - Status da query
-- Validação com Pydantic
+**T056: Query Endpoints** (`src/api/routes/query.py`)
+```python
+# Endpoints:
+POST   /api/v1/query          # Consulta síncrona (aguarda resposta)
+POST   /api/v1/query/async    # Consulta assíncrona (retorna query_id)
+GET    /api/v1/query/{id}     # Status/resultado da query
+DELETE /api/v1/query/{id}     # Cancelar query pendente
+```
 
 **T057: Document Endpoints** (`src/api/routes/documents.py`)
-- POST /api/v1/documents - Upload de documentos
-- GET /api/v1/documents - Listar documentos
-- GET /api/v1/documents/{doc_id} - Detalhes
-- DELETE /api/v1/documents/{doc_id} - Remover
+```python
+# Endpoints:
+POST   /api/v1/documents           # Upload documento
+GET    /api/v1/documents           # Listar documentos
+GET    /api/v1/documents/{id}      # Detalhes documento
+DELETE /api/v1/documents/{id}      # Deletar documento
+GET    /api/v1/documents/{id}/chunks  # Chunks do documento
+```
 
 **T058: Collection Endpoints** (`src/api/routes/collections.py`)
-- GET /api/v1/collections - Listar collections
-- POST /api/v1/collections - Criar collection
-- GET /api/v1/collections/{name}/stats - Estatísticas
+```python
+# Endpoints:
+GET    /api/v1/collections         # Listar collections
+POST   /api/v1/collections         # Criar collection
+GET    /api/v1/collections/{name}  # Detalhes collection
+GET    /api/v1/collections/{name}/stats  # Estatísticas
+DELETE /api/v1/collections/{name}  # Deletar collection
+```
 
 **T059: Health/Metrics Endpoints** (`src/api/routes/health.py`)
-- GET /health - Health check
-- GET /metrics - Prometheus metrics
-- GET /ready - Readiness probe
+```python
+# Endpoints:
+GET /health  # Health check (all services)
+GET /ready   # Readiness probe
+GET /metrics # Prometheus metrics (opcional)
+```
 
-#### 4. Testing (T060-T061)
+#### Testing (2 tasks)
 
 **T060: Integration Tests** (`tests/integration/`)
-- Test end-to-end flow: query → retrieval → generation
-- Test com Supabase real
-- Test com Qdrant real (mock se não disponível)
+- Test end-to-end RAG pipeline
+- Test com PostgreSQL real
+- Test com Qdrant (mock se indisponível)
 - Test error scenarios
 
 **T061: E2E Tests** (`tests/e2e/`)
-- Test API endpoints completos
+- Test API endpoints
 - Test workers RabbitMQ
 - Test escalation flow
 - Performance/load testing
 
 ---
 
-## Ordem de Implementação Recomendada
+## 🔧 Configuração de Serviços Externos
 
-### Fase 1: Core Services ✅ COMPLETO
+### ✅ Funcionando
 
-1. ✅ **Guardrails Service** (T052) - Implementado e testado
-2. ✅ **Base Worker** (T053) - Implementado e testado
+**PostgreSQL (Supabase)**
+- Status: ✅ Ativo
+- URL: Configurado em `.env`
+- Tabelas: 9 tabelas criadas
+- Dados: 30 reviews + 30 chunks
 
-### Fase 2: Services Layer ✅ COMPLETO
+**RabbitMQ (CloudAMQP)**
+- Status: ✅ Ativo
+- URL: Configurado em `.env`
+- Queues: Testado declarar/deletar
 
-3. ✅ **Embedding Service** (T049) - Implementado (requer OpenAI para uso)
-4. ✅ **Retrieval Service** (T050) - Implementado (requer Qdrant para uso)
-5. ✅ **Generation Service** (T051) - Implementado (requer OpenAI para uso)
+### ⚠️ Requer Ação Manual
 
-### Fase 3: Worker Implementation ✅ COMPLETO
+**Qdrant Cloud**
+- Status: ⚠️ Configurado mas inativo
+- Ação: Ativar cluster no dashboard
+- URL: https://cloud.qdrant.io
+- Cluster ID: `740e442b-1289-489d-86da-dd4786839615`
+- Verificar: `python tests/test_qdrant_connection.py`
+- **Nota**: Workers e services já implementados, apenas aguardam ativação
 
-6. ✅ **Query Worker** (T054) - Implementado e integrado com todos os services
-
-### Fase 4: API Layer
-
-7. **FastAPI App Setup** (T055)
-8. **Query Endpoint** (T056)
-9. **Document Endpoints** (T057)
-10. **Collection Endpoints** (T058)
-11. **Health/Metrics Endpoints** (T059)
-
-### Fase 5: Testing
-
-12. **Integration Tests** (T060)
-13. **E2E Tests** (T061)
-
----
-
-## Checklist de Ações Imediatas
-
-### 🔴 Urgente - Bloqueia desenvolvimento
-
-- [ ] **Ativar Qdrant Cloud cluster**
-  - Acessar: https://cloud.qdrant.io
-  - Ativar cluster: 740e442b-1289-489d-86da-dd4786839615
-  - Verificar: rodar `python tests/test_qdrant_connection.py`
-
-- [ ] **Adicionar créditos OpenAI**
-  - Acessar: https://platform.openai.com/account/billing
-  - Adicionar créditos ($5-10 suficiente para testes)
-  - Verificar: rodar `python tests/test_openai_connection.py`
-
-### ✅ Já Implementado
-
-- [x] **Implementar Guardrails Service** (T052) - Completo e testado
-- [x] **Implementar Base Worker** (T053) - Completo e testado
-- [x] **Implementar services layer completo** (T049-T051) - Completo
-- [x] **Implementar Query Worker** (T054) - Completo e testado
-
-### 🟡 Próximas Tarefas (pode iniciar sem bloqueios externos)
-
-- [ ] **Implementar FastAPI App Setup** (T055)
-- [ ] **Implementar Query Endpoint** (T056)
-- [ ] **Implementar Document Endpoints** (T057)
-- [ ] **Implementar Collection Endpoints** (T058)
-- [ ] **Implementar Health/Metrics Endpoints** (T059)
-
-### 🔵 Tarefas Finais
-
-- [ ] **Escrever testes de integração** (T060)
-- [ ] **Escrever testes E2E** (T061)
+**OpenAI API**
+- Status: ⚠️ API Key configurada, sem créditos
+- Ação: Adicionar créditos ($5-10 suficiente para testes)
+- URL: https://platform.openai.com/account/billing
+- Verificar: `python tests/test_openai_connection.py`
+- **Nota**: Services já implementados, apenas aguardam créditos
 
 ---
 
-## Comandos Úteis
+## 📁 Estrutura do Projeto
+
+```
+ragFlow/
+├── src/
+│   ├── lib/              ✅ Bibliotecas compartilhadas (8 arquivos)
+│   ├── models/           ✅ Modelos Pydantic (5 arquivos)
+│   ├── repositories/     ✅ Camada de dados (4 arquivos)
+│   ├── services/         ✅ Lógica de negócio (4 arquivos)
+│   ├── workers/          ✅ Workers RabbitMQ (2 arquivos)
+│   └── api/              ⏳ API REST (a implementar)
+│       ├── app.py        ⏳ FastAPI app
+│       └── routes/       ⏳ Endpoints
+│           ├── query.py
+│           ├── documents.py
+│           ├── collections.py
+│           └── health.py
+├── alembic/              ✅ Migrations (9 arquivos)
+├── scripts/              ✅ Scripts utilitários (6 arquivos)
+├── tests/                ⏳ Testes (a implementar)
+│   ├── integration/      ⏳ Testes de integração
+│   └── e2e/              ⏳ Testes E2E
+├── data/                 ✅ Dados de teste
+└── .env                  ✅ Configurações
+```
+
+---
+
+## 💻 Comandos Úteis
+
+### Verificação Rápida
 
 ```bash
-# Testar todos os serviços
-python tests/test_all_services.py
-
-# Testar Qdrant (após ativar cluster)
-python tests/test_qdrant_connection.py
-
-# Testar OpenAI (após adicionar créditos)
-python tests/test_openai_connection.py
-
-# Verificar schema do banco
-python tests/test_database_schema.py
-
-# Ver status das migrations
-alembic current
-
-# Instalar dependências que faltam
-pip install -r requirements.txt
-```
-
----
-
-## Estimativa de Tempo
-
-- **Ações urgentes**: 15-30 min (ativar Qdrant + adicionar créditos OpenAI)
-- **Services Layer (T049-T052)**: 4-6 horas
-- **Workers Layer (T053-T054)**: 2-3 horas
-- **API Layer (T055-T059)**: 4-6 horas
-- **Testing (T060-T061)**: 3-4 horas
-
-**Total estimado**: 13-19 horas de desenvolvimento
-
----
-
-## Progresso Geral do Projeto
-
-```
-Phase 1 (Planning): ████████████████████ 100% (20/20 tasks)
-Phase 2 (Foundational): ████████████████████ 100% (48/48 tasks)
-Phase 3 (MVP): █████████░░░░░░░░░░░ 46% (6/13 tasks)
-```
-
-**Total**: 74/81 tasks (91%)
-
-### Phase 3 - Detalhamento
-- ✅ Services Layer (T049-T052): 4/4 tasks (100%)
-- ✅ Workers Layer (T053-T054): 2/2 tasks (100%)
-- ⏳ API Layer (T055-T059): 0/5 tasks (0%)
-- ⏳ Testing (T060-T061): 0/2 tasks (0%)
-
----
-
-## Próximo Comando a Executar
-
-```bash
-# Verificar implementação atual
+# Verificar implementação (services/workers)
 python scripts/check_implementation.py
 
-# Próximas tarefas:
-# 1. Implementar FastAPI App Setup (T055)
-# 2. Implementar API endpoints (T056-T059)
-# 3. Escrever testes (T060-T061)
+# Ver status do banco de dados
+alembic current
+python tests/test_database_schema.py
 
-# Teste end-to-end (requer Qdrant + OpenAI ativos):
-# python scripts/test_query_worker.py
+# Testar conexões (após ativar serviços)
+python tests/test_qdrant_connection.py
+python tests/test_openai_connection.py
 ```
 
-## Arquivos Criados nesta Sessão
+### Desenvolvimento
 
-**Workers:**
-- `src/workers/base_worker.py` - Base worker com RabbitMQ connection management
-- `src/workers/query_worker.py` - Query worker com RAG pipeline completo
+```bash
+# Instalar dependências
+pip install -r requirements.txt
 
-**Scripts de Teste:**
-- `scripts/test_query_worker.py` - Publica queries de teste no RabbitMQ
-- `scripts/check_query_status.py` - Verifica status de queries
-- `scripts/check_implementation.py` - Verifica status da implementação
+# Criar nova migration
+alembic revision --autogenerate -m "description"
+
+# Aplicar migrations
+alembic upgrade head
+
+# Reverter migration
+alembic downgrade -1
+```
+
+### Testes de Workers (após ativar Qdrant + OpenAI)
+
+```bash
+# Terminal 1: Iniciar Query Worker
+python src/workers/query_worker.py
+
+# Terminal 2: Publicar queries de teste
+python scripts/test_query_worker.py
+
+# Verificar status de uma query
+python scripts/check_query_status.py <query_id>
+```
+
+---
+
+## 🎯 Próxima Sessão - Roteiro Sugerido
+
+### Opção 1: Implementar API Layer (recomendado)
+**Objetivo**: Completar MVP com API REST funcional
+**Tempo estimado**: 4-6 horas
+**Não requer**: Qdrant ou OpenAI ativos
+
+**Passos**:
+1. Criar estrutura base da API (`src/api/app.py`)
+2. Implementar health check endpoints (T059)
+3. Implementar query endpoints (T056)
+4. Implementar document endpoints (T057)
+5. Implementar collection endpoints (T058)
+6. Testar localmente com mock data
+
+**Resultado**: API REST completa, pronta para testes E2E quando serviços externos estiverem ativos.
+
+### Opção 2: Ativar Serviços e Testar Workers
+**Objetivo**: Validar RAG pipeline end-to-end
+**Tempo estimado**: 1-2 horas
+**Requer**: Ativar Qdrant + adicionar créditos OpenAI
+
+**Passos**:
+1. Ativar Qdrant Cloud cluster
+2. Adicionar créditos OpenAI
+3. Executar `scripts/test_query_worker.py`
+4. Verificar resultados com `scripts/check_query_status.py`
+5. Validar quality das respostas geradas
+
+**Resultado**: Validação completa do pipeline RAG, identificar ajustes necessários.
+
+### Opção 3: Escrever Testes
+**Objetivo**: Adicionar cobertura de testes
+**Tempo estimado**: 3-4 horas
+**Não requer**: Serviços externos (pode usar mocks)
+
+**Passos**:
+1. Setup pytest e fixtures
+2. Testes unitários dos services
+3. Testes de integração (com mocks)
+4. Testes E2E (quando API estiver pronta)
+
+---
+
+## 📝 Notas Importantes
+
+### Decisões de Arquitetura
+
+- **Processamento Assíncrono**: Queries são processadas via RabbitMQ workers para melhor escalabilidade
+- **Confidence Scoring**: Sistema calcula confiança baseado em similaridade dos chunks e incerteza da resposta
+- **Graceful Degradation**: Workers continuam funcionando mesmo com falhas parciais
+- **Logging Estruturado**: Todos os componentes usam JSON logging para observabilidade
+
+### Próximas Melhorias (Backlog)
+
+- [ ] Implementar escalation para queries de baixa confiança
+- [ ] Adicionar cache Redis para respostas frequentes
+- [ ] Implementar reranking dos chunks recuperados
+- [ ] Adicionar streaming de respostas (SSE)
+- [ ] Implementar rate limiting na API
+- [ ] Adicionar autenticação/autorização
+- [ ] Implementar observability (traces, metrics)
+- [ ] Deploy em produção (Docker + K8s)
+
+### Dados de Teste
+
+Atualmente temos:
+- 30 reviews da Olist em português
+- Categorias: eletrônicos, beleza, casa, etc.
+- Sentimentos: positivo, negativo, neutro
+- Scores: 1-5 estrelas
+
+Para adicionar mais dados: `scripts/process_reviews.py`
+
+---
+
+## 🔗 Links Úteis
+
+- **Documentação do Projeto**: `README.md`
+- **Especificação Detalhada**: `docs/spec.md` (se existir)
+- **Qdrant Dashboard**: https://cloud.qdrant.io
+- **OpenAI Platform**: https://platform.openai.com
+- **Supabase Dashboard**: (URL do seu projeto)
+- **CloudAMQP Dashboard**: (URL do seu broker)
+
+---
+
+## ✅ Checklist para Próxima Sessão
+
+Antes de começar:
+- [ ] `git pull` - Atualizar código
+- [ ] `git status` - Verificar branch
+- [ ] `python scripts/check_implementation.py` - Validar estado
+- [ ] Revisar este documento
+
+Durante desenvolvimento:
+- [ ] Criar branch para feature (se necessário)
+- [ ] Commits frequentes e descritivos
+- [ ] Testar cada componente isoladamente
+- [ ] Atualizar este arquivo com progresso
+
+Antes de finalizar:
+- [ ] Executar todos os testes
+- [ ] Atualizar documentação
+- [ ] Commit final com mensagem descritiva
+- [ ] Atualizar progresso neste arquivo
+
+---
+
+**Última modificação**: 2025-11-14
+**Próxima meta**: Implementar FastAPI App Setup (T055)
