@@ -8,14 +8,18 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from sqlalchemy import create_engine, text
 
-# Supabase PostgreSQL connection
+# Supabase PostgreSQL connection (using pooler)
+# User: postgres.bxeyoqsgspfxaxgeckfo
+# Host: aws-0-us-west-2.pooler.supabase.com
+# Port: 6543 (pooler)
 # Password URL-encoded: #&QS5uH7CC_f-U! -> %23%26QS5uH7CC_f-U%21
-database_url = "postgresql+psycopg://postgres:%23%26QS5uH7CC_f-U%21@db.bxeyoqsgspfxaxgeckfo.supabase.co:5432/postgres"
+database_url = "postgresql+psycopg://postgres.bxeyoqsgspfxaxgeckfo:%23%26QS5uH7CC_f-U%21@aws-0-us-west-2.pooler.supabase.com:6543/postgres"
 
 try:
     print("Testing Supabase PostgreSQL connection...")
     print("Project: ragFlow")
-    print("Host: db.bxeyoqsgspfxaxgeckfo.supabase.co")
+    print("Host: aws-0-us-west-2.pooler.supabase.com (pooler)")
+    print("Port: 6543")
     print()
 
     # Create engine
