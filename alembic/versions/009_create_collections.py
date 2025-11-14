@@ -38,8 +38,8 @@ def upgrade() -> None:
     # Insert default collection
     op.execute(
         """
-        INSERT INTO collections (name, description, vector_dimensionality, distance_metric)
-        VALUES ('olist_reviews', 'Olist order reviews from Kaggle dataset', 1536, 'cosine')
+        INSERT INTO collections (name, description, vector_dimensionality, distance_metric, document_count, total_vector_count)
+        VALUES ('olist_reviews', 'Olist order reviews from Kaggle dataset', 1536, 'cosine', 0, 0)
         """
     )
 
