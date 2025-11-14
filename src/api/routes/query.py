@@ -253,12 +253,12 @@ async def list_queries(
     """
     query_repo = QueryRepository(db)
 
-    # Build filter
-    filters = {}
-    if status_filter:
-        filters["status"] = status_filter
-
-    queries = query_repo.list_queries(limit=limit, offset=offset, filters=filters)
+    # Call list_queries with named parameters
+    queries = query_repo.list_queries(
+        status=status_filter,
+        limit=limit,
+        offset=offset,
+    )
 
     return [
         QueryResponse(

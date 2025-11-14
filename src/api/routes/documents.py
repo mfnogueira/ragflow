@@ -208,14 +208,13 @@ async def list_documents(
     """
     doc_repo = DocumentRepository(db)
 
-    # Build filters
-    filters = {}
-    if collection:
-        filters["collection"] = collection
-    if status_filter:
-        filters["status"] = status_filter
-
-    documents = doc_repo.list_documents(limit=limit, offset=offset, filters=filters)
+    # Call list_documents with named parameters
+    documents = doc_repo.list_documents(
+        collection_name=collection,
+        status=status_filter,
+        limit=limit,
+        offset=offset,
+    )
 
     return [
         DocumentResponse(
@@ -287,10 +286,10 @@ async def get_document_chunks(
     return [
         ChunkResponse(
             chunk_id=chunk.id,
-            chunk_index=chunk.chunk_index,
-            content=chunk.content,
+            chunk_index=chunk.sequence_position,
+            content=chunk.text_content,
             token_count=chunk.token_count,
-            has_embedding=chunk.vector_id is not None,
+            has_embedding=False,  # TODO: Check Qdrant when vector service is ready
         )
         for chunk in chunks
     ]
@@ -350,7 +349,8 @@ async def get_document_embedding_status(
         )
 
     chunks = doc_repo.get_chunks(document_id)
-    embedded_chunks = sum(1 for chunk in chunks if chunk.vector_id is not None)
+    # TODO: Query Qdrant to get actual embedding status when vector service is ready
+    embedded_chunks = 0
 
     return {
         "document_id": document_id,
@@ -358,5 +358,5 @@ async def get_document_embedding_status(
         "total_chunks": len(chunks),
         "embedded_chunks": embedded_chunks,
         "progress_percentage": (embedded_chunks / len(chunks) * 100) if chunks else 0,
-        "embedding_job_id": document.embedding_job_id,
+        "embedding_job_id": None,  # TODO: Get from embedding jobs table
     }

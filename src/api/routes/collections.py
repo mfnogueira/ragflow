@@ -337,7 +337,7 @@ async def get_collection_stats(
     try:
         # Get document count
         result = db.execute(
-            text("SELECT COUNT(*) FROM documents WHERE collection = :collection"),
+            text("SELECT COUNT(*) FROM documents WHERE collection_name = :collection"),
             {"collection": collection_name},
         )
         document_count = result.scalar()
@@ -348,27 +348,19 @@ async def get_collection_stats(
                 SELECT COUNT(c.*)
                 FROM chunks c
                 JOIN documents d ON c.document_id = d.id
-                WHERE d.collection = :collection
+                WHERE d.collection_name = :collection
             """),
             {"collection": collection_name},
         )
         chunk_count = result.scalar()
 
-        # Get vector count (chunks with embeddings)
-        result = db.execute(
-            text("""
-                SELECT COUNT(c.*)
-                FROM chunks c
-                JOIN documents d ON c.document_id = d.id
-                WHERE d.collection = :collection AND c.vector_id IS NOT NULL
-            """),
-            {"collection": collection_name},
-        )
-        vector_count = result.scalar()
+        # Get vector count (same as chunk count for now)
+        # TODO: Query Qdrant to get actual vector count when vector service is ready
+        vector_count = chunk_count
 
         # Get query statistics
         result = db.execute(
-            text("SELECT COUNT(*) FROM queries WHERE collection = :collection"),
+            text("SELECT COUNT(*) FROM queries WHERE collection_name = :collection"),
             {"collection": collection_name},
         )
         total_queries = result.scalar()
@@ -380,10 +372,10 @@ async def get_collection_stats(
         # Get last query time
         result = db.execute(
             text("""
-                SELECT created_at
+                SELECT submitted_at
                 FROM queries
-                WHERE collection = :collection
-                ORDER BY created_at DESC
+                WHERE collection_name = :collection
+                ORDER BY submitted_at DESC
                 LIMIT 1
             """),
             {"collection": collection_name},
@@ -456,7 +448,7 @@ async def delete_collection(
 
         # Delete all documents in the collection (cascades to chunks)
         db.execute(
-            text("DELETE FROM documents WHERE collection = :collection"),
+            text("DELETE FROM documents WHERE collection_name = :collection"),
             {"collection": collection_name},
         )
 
