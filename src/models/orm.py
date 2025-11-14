@@ -65,7 +65,9 @@ class QueryORM(Base):
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
     query_text = Column(Text, nullable=False)
+    user_id = Column(String(255), nullable=True)
     collection_name = Column(String(100), nullable=False, index=True)
+    language_code = Column(String(10), nullable=False, default='pt-BR')
     status = Column(
         Enum(QueryProcessingStatus, name="query_processing_status"),
         nullable=False,
