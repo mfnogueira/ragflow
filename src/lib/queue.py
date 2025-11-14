@@ -222,3 +222,20 @@ def get_queue_manager() -> QueueManager:
     if _queue_manager is None:
         _queue_manager = QueueManager()
     return _queue_manager
+
+
+def get_rabbitmq_channel() -> BlockingChannel:
+    """
+    Get a new RabbitMQ channel for one-off operations.
+
+    Note: For long-running operations, use get_queue_manager() instead.
+    Remember to close the channel after use.
+    """
+    try:
+        parameters = pika.URLParameters(settings.rabbitmq_url)
+        connection = pika.BlockingConnection(parameters)
+        channel = connection.channel()
+        return channel
+    except AMQPConnectionError as e:
+        logger.error(f"Failed to create RabbitMQ channel: {e}")
+        raise QueueError(f"Failed to create channel: {e}")
