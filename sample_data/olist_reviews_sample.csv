@@ -1,0 +1,31 @@
+review_id,order_id,review_score,review_comment_title,review_comment_message,review_creation_date,review_answer_timestamp,product_category
+7bc7a76c-a099-11ec-97fc-7de7a20d3edd,3a4bc7e4-a099-11ec-97fc-7de7a20d3edd,5,Excelente!,O produto chegou antes do prazo e em perfeito estado. Muito satisfeito com a compra!,2024-01-15 10:30:00,2024-01-15 14:20:00,eletronicos
+8cd8b87d-a099-11ec-97fc-7de7a20d3eed,4b5cd8f5-a099-11ec-97fc-7de7a20d3eed,4,Bom produto,Produto de boa qualidade mas a entrega atrasou um pouco.,2024-01-16 09:15:00,2024-01-16 16:45:00,moveis
+9de9c98e-a099-11ec-97fc-7de7a20d3eee,5c6de9g6-a099-11ec-97fc-7de7a20d3eee,3,Razoável,O produto é ok mas esperava melhor pela descrição.,2024-01-17 14:20:00,2024-01-18 10:30:00,roupas
+aeface9f-a099-11ec-97fc-7de7a20d3eef,6d7efah7-a099-11ec-97fc-7de7a20d3eef,2,Decepcionante,Produto veio com defeito e o atendimento demorou para responder.,2024-01-18 11:45:00,2024-01-20 09:15:00,eletrodomesticos
+bfgbdfag-a099-11ec-97fc-7de7a20d3ef0,7e8fgbi8-a099-11ec-97fc-7de7a20d3ef0,1,Péssimo,Não recomendo. Produto de péssima qualidade e ainda chegou atrasado.,2024-01-19 16:30:00,2024-01-21 14:00:00,utilidades
+cghcegbh-a099-11ec-97fc-7de7a20d3ef1,8f9ghcj9-a099-11ec-97fc-7de7a20d3ef1,5,Perfeito!,Superou minhas expectativas! Entrega rápida e produto excelente.,2024-01-20 08:00:00,2024-01-20 12:30:00,livros
+dhidffci-a099-11ec-97fc-7de7a20d3ef2,9g0hidk0-a099-11ec-97fc-7de7a20d3ef2,4,Muito bom,Gostei bastante. Única ressalva é que a embalagem estava um pouco amassada.,2024-01-21 13:15:00,2024-01-22 08:45:00,beleza
+eijegdj-a099-11ec-97fc-7de7a20d3ef3,ah1ijel1-a099-11ec-97fc-7de7a20d3ef3,5,Recomendo!,Produto original e bem embalado. Vendedor muito atencioso.,2024-01-22 10:30:00,2024-01-22 15:20:00,eletronicos
+fjkfhek-a099-11ec-97fc-7de7a20d3ef4,bi2jkfm2-a099-11ec-97fc-7de7a20d3ef4,3,Ok,Atende o básico. Nada de especial.,2024-01-23 15:45:00,2024-01-24 11:00:00,brinquedos
+gklgifl-a099-11ec-97fc-7de7a20d3ef5,cj3klgn3-a099-11ec-97fc-7de7a20d3ef5,4,Bom custo-benefício,Produto bom pelo preço. Recomendo.,2024-01-24 09:00:00,2024-01-24 16:30:00,esportes
+hlmhjgm-a099-11ec-97fc-7de7a20d3ef6,dk4lmho4-a099-11ec-97fc-7de7a20d3ef6,2,Problemas na entrega,Produto bom mas a transportadora deixou a desejar. Chegou com 2 semanas de atraso.,2024-01-25 12:15:00,2024-01-27 10:00:00,moveis
+imnikkn-a099-11ec-97fc-7de7a20d3ef7,el5mnip5-a099-11ec-97fc-7de7a20d3ef7,5,Maravilhoso!,Melhor compra que fiz! Produto de altíssima qualidade.,2024-01-26 14:30:00,2024-01-26 18:00:00,informatica
+jnojllo-a099-11ec-97fc-7de7a20d3ef8,fm6nojq6-a099-11ec-97fc-7de7a20d3ef8,4,Satisfeito,Produto conforme descrito. Entrega no prazo.,2024-01-27 11:00:00,2024-01-28 09:15:00,papelaria
+kopmmp-a099-11ec-97fc-7de7a20d3ef9,gn7opmr7-a099-11ec-97fc-7de7a20d3ef9,1,Não chegou,Produto nunca chegou e o vendedor não responde.,2024-01-28 16:45:00,2024-01-30 14:30:00,roupas
+lpqnnq-a099-11ec-97fc-7de7a20d3efa,ho8pqns8-a099-11ec-97fc-7de7a20d3efa,5,Excelente atendimento,Produto ótimo e o atendimento pós-venda impecável.,2024-01-29 08:30:00,2024-01-29 12:00:00,alimentos
+mqroor-a099-11ec-97fc-7de7a20d3efb,ip9qrot9-a099-11ec-97fc-7de7a20d3efb,3,Mediano,Nem bom nem ruim. É o que promete.,2024-01-30 13:20:00,2024-01-31 10:45:00,jardim
+nrspps-a099-11ec-97fc-7de7a20d3efc,jqarspu0-a099-11ec-97fc-7de7a20d3efc,4,Recomendo,Boa compra. Voltarei a comprar nesta loja.,2024-02-01 10:00:00,2024-02-01 15:30:00,pet_shop
+ostqqt-a099-11ec-97fc-7de7a20d3efd,krbstqv1-a099-11ec-97fc-7de7a20d3efd,5,Perfeito,Não tenho nada a reclamar. Tudo perfeito!,2024-02-02 09:15:00,2024-02-02 13:45:00,eletronicos
+pturru-a099-11ec-97fc-7de7a20d3efe,lscturw2-a099-11ec-97fc-7de7a20d3efe,2,Insatisfeito,Produto diferente da foto. Me senti enganado.,2024-02-03 14:30:00,2024-02-05 11:00:00,decoracao
+quvssv-a099-11ec-97fc-7de7a20d3eff,mtduvsx3-a099-11ec-97fc-7de7a20d3eff,4,Ótimo,Produto de qualidade e entrega rápida.,2024-02-04 11:45:00,2024-02-04 16:20:00,ferramentas
+rvwttw-a099-11ec-97fc-7de7a20d3f00,nuevwty4-a099-11ec-97fc-7de7a20d3f00,5,Amei!,Produto lindo e chegou super rápido!,2024-02-05 08:00:00,2024-02-05 12:30:00,beleza
+swxuux-a099-11ec-97fc-7de7a20d3f01,ovfwxuz5-a099-11ec-97fc-7de7a20d3f01,3,Comum,Produto comum. Sem destaque.,2024-02-06 15:15:00,2024-02-07 09:45:00,automotivo
+txyyyy-a099-11ec-97fc-7de7a20d3f02,pwgxyva6-a099-11ec-97fc-7de7a20d3f02,4,Bom,Gostei do produto. Atendeu minhas expectativas.,2024-02-07 12:30:00,2024-02-07 17:00:00,construcao
+uyzzzz-a099-11ec-97fc-7de7a20d3f03,qxhyzwb7-a099-11ec-97fc-7de7a20d3f03,1,Horrível,Pior compra da minha vida. Produto veio quebrado.,2024-02-08 16:00:00,2024-02-10 14:15:00,moveis
+vzaaaa-a099-11ec-97fc-7de7a20d3f04,ryizaxc8-a099-11ec-97fc-7de7a20d3f04,5,Top!,Produto top! Super recomendo!,2024-02-09 09:30:00,2024-02-09 13:00:00,telefonia
+wabbbb-a099-11ec-97fc-7de7a20d3f05,szjabyd9-a099-11ec-97fc-7de7a20d3f05,4,Satisfatório,Produto bom e preço justo.,2024-02-10 14:45:00,2024-02-11 10:15:00,audio
+xbcccc-a099-11ec-97fc-7de7a20d3f06,takbcze0-a099-11ec-97fc-7de7a20d3f06,2,Demorou muito,Produto ok mas demorou mais de um mês para chegar.,2024-02-11 11:00:00,2024-03-15 09:00:00,importados
+ycddddd-a099-11ec-97fc-7de7a20d3f07,ublcdaf1-a099-11ec-97fc-7de7a20d3f07,5,Excelente qualidade,Produto de excelente qualidade. Vale cada centavo!,2024-02-12 08:15:00,2024-02-12 12:45:00,eletronicos
+zdeeee-a099-11ec-97fc-7de7a20d3f08,vcmdebg2-a099-11ec-97fc-7de7a20d3f08,3,Mais ou menos,Esperava mais. É aceitável.,2024-02-13 13:30:00,2024-02-14 10:00:00,games
+aeffff-a099-11ec-97fc-7de7a20d3f09,wdnfech3-a099-11ec-97fc-7de7a20d3f09,4,Recomendo,Boa compra. Produto conforme anunciado.,2024-02-14 10:45:00,2024-02-14 15:20:00,musica
