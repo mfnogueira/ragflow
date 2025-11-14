@@ -53,10 +53,13 @@ class Settings(BaseSettings):
 
     # OpenAI API
     openai_api_key: str = Field(default="")
-    openai_llm_model: str = "gpt-4o-mini"
+    openai_model: str = "gpt-4o-mini"  # LLM model for answer generation
+    openai_llm_model: str = "gpt-4o-mini"  # Alias for backward compatibility
     openai_embedding_model: str = "text-embedding-3-small"
     openai_max_retries: int = 3
     openai_timeout: int = 60
+    llm_temperature: float = 0.7  # Temperature for answer generation (0-1)
+    max_answer_length: int = 500  # Maximum tokens for generated answers
 
     # RAG Configuration
     chunk_size: int = 512
