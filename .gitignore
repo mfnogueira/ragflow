@@ -82,3 +82,8 @@ docker-compose.override.yml
 # Kubernetes
 k8s/secrets/*.yaml
 !k8s/secrets/*.yaml.template
+
+
+.claude
+.specify
+specs/
