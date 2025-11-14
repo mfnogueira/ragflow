@@ -23,8 +23,8 @@ psycopg[binary]>=3.1.0
 sqlalchemy>=2.0.25
 alembic>=1.13.0
 
-# Caching
-redis>=5.0.0
+# Caching (Optional - uncomment if using Redis)
+# redis>=5.0.0
 
 # Observability
 opentelemetry-api>=1.22.0
