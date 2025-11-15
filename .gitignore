@@ -88,3 +88,6 @@ k8s/secrets/*.yaml
 .claude
 .specify
 specs/
+
+# Project planning (local only)
+NEXT_STEPS.md
