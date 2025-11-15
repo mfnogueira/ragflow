@@ -24,9 +24,9 @@ class DocumentORM(Base):
     collection_name = Column(String(100), nullable=False, index=True)
     language_code = Column(String(10), nullable=False, default="pt-BR")
     status = Column(
-        Enum(ProcessingStatus, name="processing_status"),
+        String(50),
         nullable=False,
-        default=ProcessingStatus.PENDING,
+        default=ProcessingStatus.PENDING.value,
         index=True,
     )
     chunk_count = Column(Integer, nullable=False, default=0)
@@ -69,9 +69,9 @@ class QueryORM(Base):
     collection_name = Column(String(100), nullable=False, index=True)
     language_code = Column(String(10), nullable=False, default='pt-BR')
     status = Column(
-        Enum(QueryProcessingStatus, name="query_processing_status"),
+        String(50),
         nullable=False,
-        default=QueryProcessingStatus.PENDING,
+        default=QueryProcessingStatus.PENDING.value,
         index=True,
     )
     submitted_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
