@@ -46,7 +46,7 @@ class DocumentRepository:
             DatabaseError: If creation fails
         """
         try:
-            doc = Document(
+            doc = DocumentORM(
                 file_name=document.file_name,
                 file_format=document.file_format,
                 file_size_bytes=document.file_size_bytes,
@@ -81,7 +81,7 @@ class DocumentRepository:
             DatabaseError: If query fails
         """
         try:
-            stmt = select(DocumentORM).where(Document.id == document_id)
+            stmt = select(DocumentORM).where(DocumentORM.id == document_id)
             result = self.db.execute(stmt).scalar_one_or_none()
 
             if result is None:
@@ -123,15 +123,15 @@ class DocumentRepository:
             # Apply filters
             conditions = []
             if collection_name:
-                conditions.append(Document.collection_name == collection_name)
+                conditions.append(DocumentORM.collection_name == collection_name)
             if status:
-                conditions.append(Document.status == status)
+                conditions.append(DocumentORM.status == status)
 
             if conditions:
                 stmt = stmt.where(and_(*conditions))
 
             # Apply pagination
-            stmt = stmt.order_by(Document.uploaded_at.desc()).limit(limit).offset(offset)
+            stmt = stmt.order_by(DocumentORM.uploaded_at.desc()).limit(limit).offset(offset)
 
             results = self.db.execute(stmt).scalars().all()
             return list(results)
@@ -168,8 +168,8 @@ class DocumentRepository:
                 updates["chunk_count"] = chunk_count
 
             stmt = (
-                update(Document)
-                .where(Document.id == document_id)
+                update(DocumentORM)
+                .where(DocumentORM.id == document_id)
                 .values(**updates)
             )
 
@@ -227,7 +227,7 @@ class DocumentRepository:
             DatabaseError: If creation fails
         """
         try:
-            chunk_obj = Chunk(
+            chunk_obj = ChunkORM(
                 document_id=chunk.document_id,
                 text_content=chunk.text_content,
                 sequence_position=chunk.sequence_position,
@@ -264,7 +264,7 @@ class DocumentRepository:
         """
         try:
             chunk_objs = [
-                Chunk(
+                ChunkORM(
                     document_id=chunk.document_id,
                     text_content=chunk.text_content,
                     sequence_position=chunk.sequence_position,
@@ -340,8 +340,8 @@ class DocumentRepository:
         try:
             stmt = (
                 select(ChunkORM)
-                .where(Chunk.document_id == document_id)
-                .order_by(Chunk.sequence_position)
+                .where(ChunkORM.document_id == document_id)
+                .order_by(ChunkORM.sequence_position)
                 .limit(limit)
                 .offset(offset)
             )
@@ -367,7 +367,7 @@ class DocumentRepository:
             DatabaseError: If query fails
         """
         try:
-            stmt = select(func.count()).where(Chunk.document_id == document_id)
+            stmt = select(func.count()).where(ChunkORM.document_id == document_id)
             count = self.db.execute(stmt).scalar()
             return count or 0
 
