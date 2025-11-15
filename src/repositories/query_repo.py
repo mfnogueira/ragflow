@@ -9,15 +9,15 @@ from sqlalchemy.orm import Session
 
 from src.lib.exceptions import DatabaseError, NotFoundError
 from src.lib.logger import get_logger
+from src.models.orm import QueryORM, AnswerORM, QueryResultORM
 from src.models.query import (
-    Answer,
-    AnswerResponse,
     ProcessingStatus,
-    Query,
-    QueryCreate,
-    QueryResult,
-    QueryResponse,
     ValidationStatus,
+    # Pydantic models for input/output
+    Query as QueryPydantic,
+    Answer as AnswerPydantic,
+    QueryResult as QueryResultPydantic,
+    QueryCreate,
 )
 
 logger = get_logger(__name__)
@@ -37,7 +37,7 @@ class QueryRepository:
 
     # Query operations
 
-    def create_query(self, query: QueryCreate) -> Query:
+    def create_query(self, query: QueryCreate) -> QueryORM:
         """
         Create a new query record.
 
@@ -51,11 +51,15 @@ class QueryRepository:
             DatabaseError: If creation fails
         """
         try:
-            query_obj = Query(
+            from datetime import datetime
+
+            query_obj = QueryORM(
                 query_text=query.query_text,
                 user_id=query.user_id,
                 collection_name=query.collection_name,
-                session_correlation_id=query.session_correlation_id,
+                language_code='pt-BR',
+                status=ProcessingStatus.PENDING,
+                submitted_at=datetime.utcnow(),
             )
 
             self.db.add(query_obj)
@@ -70,7 +74,7 @@ class QueryRepository:
             logger.error(f"Failed to create query: {e}")
             raise DatabaseError(f"Query creation failed: {e}")
 
-    def get_query(self, query_id: UUID) -> Query:
+    def get_query(self, query_id: UUID) -> QueryORM:
         """
         Get query by ID.
 
@@ -85,7 +89,7 @@ class QueryRepository:
             DatabaseError: If query fails
         """
         try:
-            stmt = select(Query).where(Query.id == query_id)
+            stmt = select(QueryORM).where(QueryORM.id == query_id)
             result = self.db.execute(stmt).scalar_one_or_none()
 
             if result is None:
@@ -141,7 +145,7 @@ class QueryRepository:
         collection_name: str | None = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> list[Query]:
+    ) -> list[QueryORM]:
         """
         List queries with optional filters.
 
@@ -159,22 +163,22 @@ class QueryRepository:
             DatabaseError: If query fails
         """
         try:
-            stmt = select(Query)
+            stmt = select(QueryORM)
 
             # Apply filters
             conditions = []
             if user_id:
-                conditions.append(Query.user_id == user_id)
+                conditions.append(QueryORM.user_id == user_id)
             if status:
-                conditions.append(Query.status == status)
+                conditions.append(QueryORM.status == status)
             if collection_name:
-                conditions.append(Query.collection_name == collection_name)
+                conditions.append(QueryORM.collection_name == collection_name)
 
             if conditions:
                 stmt = stmt.where(and_(*conditions))
 
             # Apply pagination
-            stmt = stmt.order_by(Query.submitted_at.desc()).limit(limit).offset(offset)
+            stmt = stmt.order_by(QueryORM.submitted_at.desc()).limit(limit).offset(offset)
 
             results = self.db.execute(stmt).scalars().all()
             return list(results)
@@ -185,12 +189,12 @@ class QueryRepository:
 
     # Answer operations
 
-    def create_answer(self, answer: Answer) -> Answer:
+    def create_answer(self, answer: AnswerORM) -> AnswerORM:
         """
         Create a new answer record.
 
         Args:
-            answer: Answer instance
+            answer: AnswerORM instance
 
         Returns:
             Created answer
@@ -211,7 +215,7 @@ class QueryRepository:
             logger.error(f"Failed to create answer: {e}")
             raise DatabaseError(f"Answer creation failed: {e}")
 
-    def get_answer(self, answer_id: UUID) -> Answer:
+    def get_answer(self, answer_id: UUID) -> AnswerORM:
         """
         Get answer by ID.
 
@@ -240,7 +244,7 @@ class QueryRepository:
             logger.error(f"Failed to get answer {answer_id}: {e}")
             raise DatabaseError(f"Answer fetch failed: {e}")
 
-    def get_answer_by_query(self, query_id: UUID) -> Answer | None:
+    def get_answer_by_query(self, query_id: UUID) -> AnswerORM | None:
         """
         Get answer for a query.
 
@@ -265,7 +269,7 @@ class QueryRepository:
 
     # Query result operations
 
-    def create_query_result(self, query_result: QueryResult) -> QueryResult:
+    def create_query_result(self, query_result: QueryResultORM) -> QueryResultORM:
         """
         Create a query result (retrieved chunk).
 
@@ -291,8 +295,8 @@ class QueryRepository:
             raise DatabaseError(f"Query result creation failed: {e}")
 
     def create_query_results_bulk(
-        self, query_results: list[QueryResult]
-    ) -> list[QueryResult]:
+        self, query_results: list[QueryResultORM]
+    ) -> list[QueryResultORM]:
         """
         Create multiple query results in bulk.
 
@@ -321,7 +325,7 @@ class QueryRepository:
         self,
         query_id: UUID,
         limit: int = 50,
-    ) -> list[QueryResult]:
+    ) -> list[QueryResultORM]:
         """
         Get all query results for a query.
 
@@ -337,9 +341,9 @@ class QueryRepository:
         """
         try:
             stmt = (
-                select(QueryResult)
-                .where(QueryResult.query_id == query_id)
-                .order_by(QueryResult.rank_position)
+                select(QueryResultORM)
+                .where(QueryResultORM.query_id == query_id)
+                .order_by(QueryResultORM.rank)
                 .limit(limit)
             )
 
@@ -352,7 +356,7 @@ class QueryRepository:
 
     # Combined operations
 
-    def get_query_with_answer(self, query_id: UUID) -> tuple[Query, Answer | None]:
+    def get_query_with_answer(self, query_id: UUID) -> tuple[QueryORM, AnswerORM | None]:
         """
         Get query and its answer (if exists).
 
@@ -473,45 +477,37 @@ class QueryRepository:
         question: str,
         collection: str,
         max_chunks: int,
-    ) -> Any:
+    ) -> QueryORM:
         """
         Simplified create method for API layer.
 
         Note: collection parameter name kept for API compatibility,
         but internally uses collection_name.
         """
-        from src.models.query import QueryCreate
-
-        query_create = QueryCreate(
-            query_text=question,
-            collection_name=collection,
-        )
-
-        # Create simple response object
-        class SimpleQuery:
-            def __init__(self, id, question, collection, status, created_at, completed_at, answers, query_results):
-                self.id = id
-                self.question = question
-                self.collection = collection
-                self.status = status
-                self.created_at = created_at
-                self.completed_at = completed_at
-                self.answers = answers
-                self.query_results = query_results
-
+        from uuid import UUID
         from datetime import datetime
-        from src.models.query import ProcessingStatus
 
-        return SimpleQuery(
-            id=query_id,
-            question=question,
-            collection=collection,
-            status=ProcessingStatus.PENDING,
-            created_at=datetime.utcnow(),
-            completed_at=None,
-            answers=[],
-            query_results=[],
-        )
+        try:
+            query_obj = QueryORM(
+                id=UUID(query_id),
+                query_text=question,
+                collection_name=collection,
+                language_code='pt-BR',
+                status=ProcessingStatus.PENDING,
+                submitted_at=datetime.utcnow(),
+            )
+
+            self.db.add(query_obj)
+            self.db.commit()
+            self.db.refresh(query_obj)
+
+            logger.info(f"Created query: {query_obj.id}")
+            return query_obj
+
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Failed to create query: {e}")
+            raise DatabaseError(f"Query creation failed: {e}")
 
     def get_by_id(self, query_id: str) -> Any:
         """Get query by ID string (wrapper for get_query)."""
