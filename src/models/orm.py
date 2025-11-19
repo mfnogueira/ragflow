@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text, JSON, Enum
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text, JSON, Enum, Boolean
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import relationship
 
@@ -92,10 +92,22 @@ class AnswerORM(Base):
     query_id = Column(PG_UUID(as_uuid=True), ForeignKey("queries.id"), nullable=False, index=True)
     answer_text = Column(Text, nullable=False)
     confidence_score = Column(Float, nullable=False)
-    model_name = Column(String(100), nullable=False)
-    prompt_tokens = Column(Integer, nullable=False)
-    completion_tokens = Column(Integer, nullable=False)
-    generated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    model_name = Column("llm_model_used", String(100), nullable=False)
+    prompt_tokens = Column("token_count_input", Integer, nullable=False, default=0)
+    completion_tokens = Column("token_count_output", Integer, nullable=False, default=0)
+    generated_at = Column("generation_timestamp", DateTime, nullable=False, default=datetime.utcnow)
+
+    # Performance metrics columns (from migration 004)
+    retrieval_latency_ms = Column(Float, nullable=False, default=0.0)
+    generation_latency_ms = Column(Float, nullable=False, default=0.0)
+    total_latency_ms = Column(Float, nullable=False, default=0.0)
+
+    # Status columns (from migration 004)
+    cache_hit = Column(Boolean, nullable=False, default=False)
+    validation_status = Column(String(20), nullable=False, default='passed')
+    escalation_flag = Column(Boolean, nullable=False, default=False)
+    redaction_flag = Column(Boolean, nullable=False, default=False)
+
     extra_metadata = Column("metadata", JSON, nullable=False, default=dict)
 
     # Relationships
