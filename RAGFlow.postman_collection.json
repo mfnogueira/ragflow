@@ -1,0 +1,393 @@
+{
+  "info": {
+    "name": "RAG Q&A System",
+    "_postman_id": "ragflow-api-collection",
+    "description": "Collection de requisições para testar o sistema RAG Q&A",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "query_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Checks",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            }
+          }
+        },
+        {
+          "name": "Readiness Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health/ready",
+              "host": ["{{base_url}}"],
+              "path": ["health", "ready"]
+            }
+          }
+        },
+        {
+          "name": "Liveness Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health/live",
+              "host": ["{{base_url}}"],
+              "path": ["health", "live"]
+            }
+          }
+        },
+        {
+          "name": "Metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health/metrics",
+              "host": ["{{base_url}}"],
+              "path": ["health", "metrics"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Queries",
+      "item": [
+        {
+          "name": "Enviar Query (Assíncrona)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('query_id', jsonData.query_id);",
+                  "    console.log('Query ID salvo: ' + jsonData.query_id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"Quais são os principais motivos de avaliações negativas?\",\n  \"collection\": \"olist_reviews\",\n  \"max_chunks\": 10,\n  \"confidence_threshold\": 0.7\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/query",
+              "host": ["{{base_url}}"],
+              "path": ["query"]
+            }
+          }
+        },
+        {
+          "name": "Consultar Status da Query",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/query/{{query_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["query", "{{query_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Listar Queries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/queries?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["queries"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "completed",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Query Síncrona (Demo)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"Como melhorar a satisfação dos clientes?\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/query/sync",
+              "host": ["{{base_url}}"],
+              "path": ["query", "sync"]
+            }
+          }
+        },
+        {
+          "name": "Query - Motivos de Avaliações Negativas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('query_id', jsonData.query_id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"Quais são os principais motivos de avaliações negativas?\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/query",
+              "host": ["{{base_url}}"],
+              "path": ["query"]
+            }
+          }
+        },
+        {
+          "name": "Query - Categorias com Mais Reclamações",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"Quais categorias de produtos têm mais reclamações?\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/query",
+              "host": ["{{base_url}}"],
+              "path": ["query"]
+            }
+          }
+        },
+        {
+          "name": "Query - Problemas de Entrega",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"Quais são os principais problemas relacionados a entrega?\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/query",
+              "host": ["{{base_url}}"],
+              "path": ["query"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Collections",
+      "item": [
+        {
+          "name": "Listar Collections",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/collections",
+              "host": ["{{base_url}}"],
+              "path": ["collections"]
+            }
+          }
+        },
+        {
+          "name": "Obter Collection",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/collections/olist_reviews",
+              "host": ["{{base_url}}"],
+              "path": ["collections", "olist_reviews"]
+            }
+          }
+        },
+        {
+          "name": "Estatísticas da Collection",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/collections/olist_reviews/stats",
+              "host": ["{{base_url}}"],
+              "path": ["collections", "olist_reviews", "stats"]
+            }
+          }
+        },
+        {
+          "name": "Criar Collection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"test_collection\",\n  \"description\": \"Collection de teste\",\n  \"vector_dimensionality\": 1536,\n  \"distance_metric\": \"cosine\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/collections",
+              "host": ["{{base_url}}"],
+              "path": ["collections"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Documents",
+      "item": [
+        {
+          "name": "Listar Documentos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/documents?limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["documents"],
+              "query": [
+                {
+                  "key": "collection",
+                  "value": "olist_reviews",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Obter Documento",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/documents/:document_id",
+              "host": ["{{base_url}}"],
+              "path": ["documents", ":document_id"],
+              "variable": [
+                {
+                  "key": "document_id",
+                  "value": "your-document-id-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Obter Chunks do Documento",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/documents/:document_id/chunks",
+              "host": ["{{base_url}}"],
+              "path": ["documents", ":document_id", "chunks"],
+              "variable": [
+                {
+                  "key": "document_id",
+                  "value": "your-document-id-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Status do Documento",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/documents/:document_id/status",
+              "host": ["{{base_url}}"],
+              "path": ["documents", ":document_id", "status"],
+              "variable": [
+                {
+                  "key": "document_id",
+                  "value": "your-document-id-here"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
