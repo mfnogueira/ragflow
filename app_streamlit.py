@@ -115,6 +115,29 @@ def submit_query_async(question: str, collection: str = "olist_reviews", max_chu
         return None
 
 
+def submit_query_demo(question: str, collection: str = "olist_reviews") -> Optional[Dict]:
+    """Submete uma query em modo demo (resposta instantânea)."""
+    try:
+        response = requests.post(
+            f"{API_BASE_URL}/api/v1/query/demo",
+            json={
+                "question": question,
+                "collection": collection
+            },
+            timeout=10
+        )
+
+        if response.status_code == 200:
+            return response.json()
+        else:
+            st.error(f"Erro ao enviar query: {response.status_code}")
+            return None
+
+    except Exception as e:
+        st.error(f"Erro ao conectar com a API: {e}")
+        return None
+
+
 def get_query_status(query_id: str) -> Optional[Dict]:
     """Obtém o status e resultado de uma query."""
     try:
@@ -299,6 +322,22 @@ with st.sidebar:
 
     st.markdown("---")
 
+    # Modo de processamento
+    processing_mode = st.radio(
+        "Modo de Processamento",
+        ["⚡ Rápido (Demo)", "🔍 Completo (RAG Real)"],
+        help="Modo Rápido: resposta instantânea com dados simulados\nModo Completo: processamento RAG completo (~1min)"
+    )
+
+    use_demo_mode = processing_mode.startswith("⚡")
+
+    if use_demo_mode:
+        st.info("💡 Modo Rápido: Respostas instantâneas baseadas em padrões comuns")
+    else:
+        st.warning("⏱️ Modo Completo: Processamento pode levar até 1 minuto")
+
+    st.markdown("---")
+
     # Coleção
     collection = st.selectbox(
         "Coleção",
@@ -387,24 +426,13 @@ if submit_button and question.strip():
 
     st.markdown("---")
 
-    # Salvar pergunta no session state para uso no modo demo
+    # Salvar pergunta no session state
     st.session_state.current_question = question
 
-    # Submeter query
-    with st.spinner("Enviando pergunta..."):
-        response = submit_query_async(
-            question,
-            collection,
-            max_chunks=max_chunks,
-            confidence_threshold=confidence_threshold
-        )
-
-    if response:
-        query_id = response.get('query_id')
-        st.info(f"✅ Query submetida! ID: `{query_id}`")
-
-        # Aguardar resposta
-        result = wait_for_answer(query_id, max_wait=max_wait_time)
+    if use_demo_mode:
+        # Modo Demo - Resposta instantânea
+        with st.spinner("Gerando resposta..."):
+            result = submit_query_demo(question, collection)
 
         if result:
             # Exibir resposta
@@ -416,6 +444,33 @@ if submit_button and question.strip():
                 'question': question,
                 'result': result
             })
+    else:
+        # Modo Completo - Processamento assíncrono
+        with st.spinner("Enviando pergunta..."):
+            response = submit_query_async(
+                question,
+                collection,
+                max_chunks=max_chunks,
+                confidence_threshold=confidence_threshold
+            )
+
+        if response:
+            query_id = response.get('query_id')
+            st.info(f"✅ Query submetida! ID: `{query_id}`")
+
+            # Aguardar resposta
+            result = wait_for_answer(query_id, max_wait=max_wait_time)
+
+            if result:
+                # Exibir resposta
+                display_answer(result)
+
+                # Adicionar ao histórico
+                st.session_state.query_history.insert(0, {
+                    'timestamp': datetime.now(),
+                    'question': question,
+                    'result': result
+                })
 
 # Histórico
 if st.session_state.query_history:
