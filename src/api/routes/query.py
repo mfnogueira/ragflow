@@ -101,10 +101,10 @@ async def create_query_sync(
     # For MVP: Return pending status
     # In production: Implement proper synchronous flow with timeout
     return QueryResponse(
-        query_id=query.id,
-        question=query.question,
+        query_id=str(query.id),
+        question=query.query_text,
         status=query.status,
-        created_at=query.created_at.isoformat(),
+        created_at=query.submitted_at.isoformat(),
     )
 
 
@@ -148,23 +148,22 @@ async def create_query_async(
 
         # Create message
         message = ProcessQueryMessage(
-            message_id=query.id,
             query_id=query.id,
-            question=query.question,
-            collection=request.collection or settings.default_collection,
+            query_text=query.query_text,
+            collection_name=request.collection or settings.default_collection,
             max_chunks=request.max_chunks or settings.max_chunks_per_query,
-            confidence_threshold=request.confidence_threshold or settings.confidence_threshold,
         )
 
         # Publish message
+        import pika
         channel.basic_publish(
             exchange="",
             routing_key="queries",
             body=message.model_dump_json(),
-            properties={
-                "delivery_mode": 2,  # Persistent
-                "content_type": "application/json",
-            },
+            properties=pika.BasicProperties(
+                delivery_mode=2,  # Persistent
+                content_type="application/json",
+            ),
         )
 
         channel.close()
@@ -180,7 +179,7 @@ async def create_query_async(
         )
 
     return AsyncQueryResponse(
-        query_id=query.id,
+        query_id=str(query.id),
         status="accepted",
         message=f"Query accepted for processing. Use GET /api/v1/query/{query.id} to check status.",
     )
@@ -228,13 +227,13 @@ async def get_query_status(
             ]
 
     return QueryResponse(
-        query_id=query.id,
-        question=query.question,
+        query_id=str(query.id),
+        question=query.query_text,
         status=query.status,
         answer=answer_text,
         confidence_score=confidence_score,
         sources=sources,
-        created_at=query.created_at.isoformat(),
+        created_at=query.submitted_at.isoformat(),
         completed_at=query.completed_at.isoformat() if query.completed_at else None,
     )
 
@@ -262,11 +261,111 @@ async def list_queries(
 
     return [
         QueryResponse(
-            query_id=q.id,
-            question=q.question,
+            query_id=str(q.id),
+            question=q.query_text,
             status=q.status,
-            created_at=q.created_at.isoformat(),
+            created_at=q.submitted_at.isoformat(),
             completed_at=q.completed_at.isoformat() if q.completed_at else None,
         )
         for q in queries
     ]
+
+
+@router.post(
+    "/query/demo",
+    response_model=AsyncQueryResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def create_query_demo(
+    request: QueryRequest,
+    db: Session = Depends(get_db),
+) -> AsyncQueryResponse:
+    """
+    Demo endpoint que retorna respostas simuladas.
+
+    Útil para testar a interface sem depender de RabbitMQ, OpenAI ou Qdrant.
+    Cria a query no banco e retorna imediatamente com uma resposta simulada.
+    """
+    import time
+    from datetime import datetime, timedelta
+
+    logger.info(f"Received demo query: {request.question[:50]}...")
+
+    # Create query in database
+    query_repo = QueryRepository(db)
+
+    query_id = str(uuid4())
+    query = query_repo.create(
+        query_id=query_id,
+        question=request.question,
+        collection=request.collection,
+        max_chunks=request.max_chunks,
+    )
+
+    # Simular resposta baseada na pergunta
+    demo_answers = {
+        "negativ": "Com base nos reviews analisados, os principais motivos de avaliações negativas são: (1) Atrasos na entrega - muitos clientes reclamam de produtos que chegaram com semanas de atraso; (2) Produtos diferentes do anunciado - discrepâncias entre descrição e produto recebido; (3) Problemas com qualidade - produtos com defeitos ou danificados no transporte.",
+        "elogiam": "Os clientes mais elogiam: (1) Qualidade dos produtos - muitos comentários sobre produtos que superaram expectativas; (2) Atendimento - vendedores atenciosos e prestativos; (3) Embalagem - cuidado no empacotamento e apresentação; (4) Preços competitivos - bom custo-benefício.",
+        "categoria": "As categorias com melhores avaliações são: (1) Livros e mídia - score médio de 4.5/5; (2) Produtos de beleza e cuidados pessoais - 4.3/5; (3) Informática e eletrônicos - 4.2/5. As categorias com avaliações mais baixas incluem móveis (3.8/5) e produtos para casa (3.9/5).",
+        "entrega": "As principais reclamações sobre entrega incluem: (1) Prazos não cumpridos - 45% das reclamações; (2) Falta de rastreamento - 25%; (3) Produtos perdidos ou extraviados - 15%; (4) Problemas com transportadora - 10%; (5) Outros - 5%.",
+        "qualidade": "Sobre a qualidade dos produtos, os clientes mencionam: (1) Maioria dos produtos atende ou supera expectativas (65% positivo); (2) Alguns produtos com qualidade inferior ao esperado (20% negativo); (3) Problemas com descrições imprecisas (15%). Produtos de marcas reconhecidas têm melhor avaliação de qualidade."
+    }
+
+    # Encontrar melhor resposta
+    question_lower = request.question.lower()
+    answer_text = "Com base nos reviews analisados, podemos fornecer informações sobre diversos aspectos das avaliações de clientes. Os dados indicam padrões interessantes de satisfação e reclamações que podem ajudar a entender melhor a experiência dos consumidores."
+    confidence = 0.75
+
+    for keyword, text in demo_answers.items():
+        if keyword in question_lower:
+            answer_text = text
+            confidence = 0.85
+            break
+
+    # Criar answer no banco
+    from src.repositories.query_repo import QueryRepository
+    from datetime import datetime
+
+    answer_id = str(uuid4())
+    answer_data = {
+        "id": answer_id,
+        "query_id": query_id,
+        "answer_text": answer_text,
+        "confidence_score": confidence,
+        "model_name": "demo-mode",
+        "prompt_tokens": 100,
+        "completion_tokens": 150,
+        "generated_at": datetime.utcnow(),
+        "metadata": {"mode": "demo", "simulated": True}
+    }
+
+    query_repo.create_answer(
+        query_id=query_id,
+        answer_text=answer_text,
+        confidence_score=confidence,
+        model_name="demo-mode",
+        prompt_tokens=100,
+        completion_tokens=150,
+    )
+
+    # Atualizar status da query para completed
+    query_repo.update_status(query_id, ProcessingStatus.COMPLETED)
+
+    # Criar query results simulados (sources)
+    from uuid import uuid4 as new_uuid
+
+    for i in range(3):
+        chunk_id = str(new_uuid())
+        query_repo.create_query_result(
+            query_id=query_id,
+            chunk_id=chunk_id,
+            similarity_score=0.85 - (i * 0.05),
+            rank=i + 1,
+        )
+
+    logger.info(f"Demo query {query_id} processed successfully")
+
+    return AsyncQueryResponse(
+        query_id=query_id,
+        message="Query queued for processing (DEMO MODE - usando respostas simuladas)",
+    )
