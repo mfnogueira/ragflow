@@ -2,6 +2,7 @@
 
 from typing import Optional
 from uuid import uuid4
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from pydantic import BaseModel, Field
@@ -323,14 +324,27 @@ async def create_query_demo(
             break
 
     # Criar answer no banco
-    query_repo.create_answer(
+    from src.models.orm import AnswerORM
+
+    answer_orm = AnswerORM(
+        id=uuid4(),
         query_id=query_id,
         answer_text=answer_text,
         confidence_score=confidence,
         model_name="demo-mode",
         prompt_tokens=100,
         completion_tokens=150,
+        generated_at=datetime.utcnow(),
+        retrieval_latency_ms=0.0,
+        generation_latency_ms=0.0,
+        total_latency_ms=0.0,
+        cache_hit=False,
+        validation_status='passed',
+        escalation_flag=False,
+        redaction_flag=False,
+        extra_metadata={"mode": "demo", "simulated": True}
     )
+    query_repo.create_answer(answer_orm)
 
     # Atualizar status da query para completed
     query_repo.update_status(query_id, ProcessingStatus.COMPLETED)
