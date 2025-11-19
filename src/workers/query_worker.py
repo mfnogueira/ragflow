@@ -194,8 +194,11 @@ class QueryWorker(BaseWorker):
                         query_id=UUID(query_id),
                         chunk_id=UUID(result.chunk_id),
                         similarity_score=result.similarity_score,
+                        relevance_score=result.similarity_score,  # Same as similarity_score
+                        reranking_score=None,  # No reranking applied yet
                         rank=result.rank,
                         retrieved_at=datetime.utcnow(),
+                        metadata_match_flags={},  # Empty metadata flags for now
                     )
                     db.add(query_result)
 
