@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # FastAPI - Query API
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ragflow-api
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - DEBUG=${DEBUG:-false}
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - API_KEY=${API_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+      - RABBITMQ_URL=${RABBITMQ_URL}
+      - QDRANT_URL=${QDRANT_URL}
+      - QDRANT_API_KEY=${QDRANT_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_LLM_MODEL=${OPENAI_LLM_MODEL:-gpt-4o-mini}
+      - OPENAI_EMBEDDING_MODEL=${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      - DEFAULT_COLLECTION=${DEFAULT_COLLECTION:-olist_reviews}
+      - MAX_CHUNKS_PER_QUERY=${MAX_CHUNKS_PER_QUERY:-10}
+      - CONFIDENCE_THRESHOLD=${CONFIDENCE_THRESHOLD:-0.7}
+    env_file:
+      - .env
+    command: uvicorn src.api.app:app --host 0.0.0.0 --port 8000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - ragflow-network
+
+  # Query Worker - Processes queries from RabbitMQ
+  query-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ragflow-query-worker
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - DATABASE_URL=${DATABASE_URL}
+      - RABBITMQ_URL=${RABBITMQ_URL}
+      - RABBITMQ_PREFETCH_COUNT=${RABBITMQ_PREFETCH_COUNT:-5}
+      - QDRANT_URL=${QDRANT_URL}
+      - QDRANT_API_KEY=${QDRANT_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_LLM_MODEL=${OPENAI_LLM_MODEL:-gpt-4o-mini}
+      - OPENAI_EMBEDDING_MODEL=${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      - DEFAULT_COLLECTION=${DEFAULT_COLLECTION:-olist_reviews}
+      - MAX_CHUNKS_PER_QUERY=${MAX_CHUNKS_PER_QUERY:-10}
+      - CONFIDENCE_THRESHOLD=${CONFIDENCE_THRESHOLD:-0.7}
+      - QUERY_CONCURRENCY=${QUERY_CONCURRENCY:-10}
+    env_file:
+      - .env
+    command: python -m src.workers.query_worker
+    restart: unless-stopped
+    depends_on:
+      - api
+    networks:
+      - ragflow-network
+
+networks:
+  ragflow-network:
+    driver: bridge

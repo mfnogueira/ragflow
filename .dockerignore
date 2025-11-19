@@ -1,0 +1,104 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+.hypothesis/
+.tox/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Documentation
+*.md
+docs/
+specs/
+.specify/
+.claude/
+
+# Scripts (test and utility scripts)
+test_*.py
+check_*.py
+reset_*.py
+purge_*.py
+republish_*.py
+find_*.py
+add_*.py
+full_*.py
+kill_*.ps1
+*.sh
+
+# Sample data and temporary files
+sample_data/
+scripts/
+*.txt
+nul
+
+# Environment (use env_file in docker-compose)
+.env.example
+
+# Logs
+*.log
+logs/
+
+# Alembic (migrations already in repo)
+# alembic/versions/*.pyc
+
+# Tests
+tests/
+pytest.ini
+mypy.ini
+.mypy_cache/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Other
+Procfile
+runtime.txt
