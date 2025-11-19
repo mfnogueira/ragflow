@@ -91,3 +91,7 @@ specs/
 
 # Project planning (local only)
 NEXT_STEPS.md
+
+# Auxiliary scripts (local development)
+scripts/start_api.py
+scripts/start_api_8001.py

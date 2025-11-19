@@ -73,7 +73,6 @@ st.markdown("""
 # Header
 st.markdown('<div class="main-header">🤖 RagFlow - Q&A sobre Reviews Olist</div>', unsafe_allow_html=True)
 st.markdown("Faça perguntas sobre reviews de e-commerce e receba respostas geradas por IA")
-st.info("ℹ️ **MODO DEMONSTRAÇÃO**: Usando respostas simuladas para testar a interface (RabbitMQ, OpenAI e Qdrant não estão ativos)")
 
 # Inicializar session state
 if 'query_history' not in st.session_state:
@@ -91,66 +90,70 @@ def check_api_health() -> bool:
         return False
 
 
-def submit_query_async(question: str, collection: str = "olist_reviews") -> Optional[Dict]:
-    """Submete uma query (MODO DEMO - respostas simuladas localmente)."""
-    # MODO DEMO: Simula respostas localmente sem chamar API
-    from uuid import uuid4
+def submit_query_async(question: str, collection: str = "olist_reviews", max_chunks: int = 5, confidence_threshold: float = 0.7) -> Optional[Dict]:
+    """Submete uma query para a API."""
+    try:
+        response = requests.post(
+            f"{API_BASE_URL}/api/v1/query/async",
+            json={
+                "question": question,
+                "collection": collection,
+                "max_chunks": max_chunks,
+                "confidence_threshold": confidence_threshold
+            },
+            timeout=10
+        )
 
-    query_id = str(uuid4())
+        if response.status_code == 202:
+            return response.json()
+        else:
+            st.error(f"Erro ao enviar query: {response.status_code}")
+            return None
 
-    # Retorna query_id simulado
-    return {
-        "query_id": query_id,
-        "message": "Query processada (DEMO MODE)"
-    }
+    except Exception as e:
+        st.error(f"Erro ao conectar com a API: {e}")
+        return None
+
+
+def submit_query_demo(question: str, collection: str = "olist_reviews") -> Optional[Dict]:
+    """Submete uma query em modo demo (resposta instantânea)."""
+    try:
+        response = requests.post(
+            f"{API_BASE_URL}/api/v1/query/demo",
+            json={
+                "question": question,
+                "collection": collection
+            },
+            timeout=10
+        )
+
+        if response.status_code == 200:
+            return response.json()
+        else:
+            st.error(f"Erro ao enviar query: {response.status_code}")
+            return None
+
+    except Exception as e:
+        st.error(f"Erro ao conectar com a API: {e}")
+        return None
 
 
 def get_query_status(query_id: str) -> Optional[Dict]:
-    """Obtém o status e resultado de uma query (MODO DEMO)."""
-    from datetime import datetime
+    """Obtém o status e resultado de uma query."""
+    try:
+        response = requests.get(
+            f"{API_BASE_URL}/api/v1/query/{query_id}",
+            timeout=5
+        )
 
-    # MODO DEMO: Retorna dados simulados sem chamar API
-    # Simula um pequeno delay para realism
-    import time
-    time.sleep(0.5)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return None
 
-    # Pega a pergunta do session state se disponível
-    question = st.session_state.get('current_question', 'Pergunta sobre reviews')
-
-    #  Respostas simuladas baseadas em palavras-chave
-    demo_answers = {
-        "negativ": "Com base nos reviews analisados, os principais motivos de avaliações negativas são: **(1) Atrasos na entrega** - muitos clientes reclamam de produtos que chegaram com semanas de atraso; **(2) Produtos diferentes do anunciado** - discrepâncias entre descrição e produto recebido; **(3) Problemas com qualidade** - produtos com defeitos ou danificados no transporte.",
-        "elogiam": "Os clientes mais elogiam: **(1) Qualidade dos produtos** - muitos comentários sobre produtos que superaram expectativas; **(2) Atendimento** - vendedores atenciosos e prestativos; **(3) Embalagem** - cuidado no empacotamento e apresentação; **(4) Preços competitivos** - bom custo-benefício.",
-        "categoria": "As categorias com melhores avaliações são: **(1) Livros e mídia** - score médio de 4.5/5; **(2) Produtos de beleza e cuidados pessoais** - 4.3/5; **(3) Informática e eletrônicos** - 4.2/5. As categorias com avaliações mais baixas incluem móveis (3.8/5) e produtos para casa (3.9/5).",
-        "entrega": "As principais reclamações sobre entrega incluem: **(1) Prazos não cumpridos** - 45% das reclamações; **(2) Falta de rastreamento** - 25%; **(3) Produtos perdidos ou extraviados** - 15%; **(4) Problemas com transportadora** - 10%; **(5) Outros** - 5%.",
-        "qualidade": "Sobre a qualidade dos produtos, os clientes mencionam: **(1) Maioria dos produtos atende ou supera expectativas** (65% positivo); **(2) Alguns produtos com qualidade inferior ao esperado** (20% negativo); **(3) Problemas com descrições imprecisas** (15%). Produtos de marcas reconhecidas têm melhor avaliação de qualidade."
-    }
-
-    # Encontrar melhor resposta
-    question_lower = question.lower()
-    answer_text = "Com base nos reviews analisados, podemos fornecer informações sobre diversos aspectos das avaliações de clientes. Os dados indicam padrões interessantes de satisfação e reclamações que podem ajudar a entender melhor a experiência dos consumidores."
-    confidence = 0.75
-
-    for keyword, text in demo_answers.items():
-        if keyword in question_lower:
-            answer_text = text
-            confidence = 0.85
-            break
-
-    # Retorna resultado simulado
-    return {
-        "query_id": query_id,
-        "question": question,
-        "status": "completed",
-        "answer": answer_text,
-        "confidence_score": confidence,
-        "sources": [
-            {"chunk_id": f"demo-chunk-{i+1}", "similarity_score": 0.85 - (i * 0.05)}
-            for i in range(3)
-        ],
-        "created_at": datetime.now().isoformat(),
-        "completed_at": datetime.now().isoformat()
-    }
+    except Exception as e:
+        st.error(f"Erro ao consultar status: {e}")
+        return None
 
 
 def wait_for_answer(query_id: str, max_wait: int = 60, poll_interval: int = 2) -> Optional[Dict]:
@@ -319,6 +322,22 @@ with st.sidebar:
 
     st.markdown("---")
 
+    # Modo de processamento
+    processing_mode = st.radio(
+        "Modo de Processamento",
+        ["⚡ Rápido (Demo)", "🔍 Completo (RAG Real)"],
+        help="Modo Rápido: resposta instantânea com dados simulados\nModo Completo: processamento RAG completo (~1min)"
+    )
+
+    use_demo_mode = processing_mode.startswith("⚡")
+
+    if use_demo_mode:
+        st.info("💡 Modo Rápido: Respostas instantâneas baseadas em padrões comuns")
+    else:
+        st.warning("⏱️ Modo Completo: Processamento pode levar até 1 minuto")
+
+    st.markdown("---")
+
     # Coleção
     collection = st.selectbox(
         "Coleção",
@@ -407,19 +426,13 @@ if submit_button and question.strip():
 
     st.markdown("---")
 
-    # Salvar pergunta no session state para uso no modo demo
+    # Salvar pergunta no session state
     st.session_state.current_question = question
 
-    # Submeter query
-    with st.spinner("Enviando pergunta..."):
-        response = submit_query_async(question, collection)
-
-    if response:
-        query_id = response.get('query_id')
-        st.info(f"✅ Query submetida! ID: `{query_id}`")
-
-        # Aguardar resposta
-        result = wait_for_answer(query_id, max_wait=max_wait_time)
+    if use_demo_mode:
+        # Modo Demo - Resposta instantânea
+        with st.spinner("Gerando resposta..."):
+            result = submit_query_demo(question, collection)
 
         if result:
             # Exibir resposta
@@ -431,6 +444,33 @@ if submit_button and question.strip():
                 'question': question,
                 'result': result
             })
+    else:
+        # Modo Completo - Processamento assíncrono
+        with st.spinner("Enviando pergunta..."):
+            response = submit_query_async(
+                question,
+                collection,
+                max_chunks=max_chunks,
+                confidence_threshold=confidence_threshold
+            )
+
+        if response:
+            query_id = response.get('query_id')
+            st.info(f"✅ Query submetida! ID: `{query_id}`")
+
+            # Aguardar resposta
+            result = wait_for_answer(query_id, max_wait=max_wait_time)
+
+            if result:
+                # Exibir resposta
+                display_answer(result)
+
+                # Adicionar ao histórico
+                st.session_state.query_history.insert(0, {
+                    'timestamp': datetime.now(),
+                    'question': question,
+                    'result': result
+                })
 
 # Histórico
 if st.session_state.query_history:
