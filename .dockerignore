@@ -75,8 +75,11 @@ kill_*.ps1
 # Sample data and temporary files
 sample_data/
 scripts/
-*.txt
 nul
+
+# Exclude test/temp .txt files but keep requirements
+query_ids.txt
+*.log.txt
 
 # Environment (use env_file in docker-compose)
 .env.example
