@@ -28,9 +28,9 @@ curl -X GET http://localhost:8000/health/live
 
 ## 2. Query Endpoints
 
-### Enviar uma Query (Assíncrona)
+### Enviar uma Query (Assíncrona) - RECOMENDADO
 ```bash
-curl -X POST http://localhost:8000/query \
+curl -X POST http://localhost:8000/api/v1/query/async \
   -H "Content-Type: application/json" \
   -d '{
     "question": "Quais são os principais motivos de avaliações negativas?",
@@ -40,24 +40,34 @@ curl -X POST http://localhost:8000/query \
   }'
 ```
 
-**Resposta esperada:**
+**Resposta esperada (202 Accepted):**
 ```json
 {
-  "query_id": "123e4567-e89b-12d3-a456-426614174000",
-  "status": "pending",
-  "question": "Quais são os principais motivos de avaliações negativas?",
-  "submitted_at": "2025-11-19T18:00:00Z"
+  "query_id": "bce31595-ac3e-4c06-8865-ae973c5826b6",
+  "status": "accepted",
+  "message": "Query accepted for processing. Use GET /api/v1/query/{query_id} to check status."
 }
 ```
 
+### Enviar Query Síncrona (Sem RabbitMQ)
+```bash
+curl -X POST http://localhost:8000/api/v1/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "Quais são os principais problemas relatados?"
+  }'
+```
+
+**Nota:** Este endpoint NÃO publica para RabbitMQ. A query é salva no banco mas retorna status `pending` imediatamente. Use `/query/async` para processamento completo.
+
 ### Buscar Status de uma Query
 ```bash
-curl -X GET http://localhost:8000/query/{query_id}
+curl -X GET http://localhost:8000/api/v1/query/{query_id}
 ```
 
 Exemplo:
 ```bash
-curl -X GET http://localhost:8000/query/123e4567-e89b-12d3-a456-426614174000
+curl -X GET http://localhost:8000/api/v1/query/bce31595-ac3e-4c06-8865-ae973c5826b6
 ```
 
 ### Listar Queries Recentes
