@@ -323,22 +323,6 @@ async def create_query_demo(
             break
 
     # Criar answer no banco
-    from src.repositories.query_repo import QueryRepository
-    from datetime import datetime
-
-    answer_id = str(uuid4())
-    answer_data = {
-        "id": answer_id,
-        "query_id": query_id,
-        "answer_text": answer_text,
-        "confidence_score": confidence,
-        "model_name": "demo-mode",
-        "prompt_tokens": 100,
-        "completion_tokens": 150,
-        "generated_at": datetime.utcnow(),
-        "metadata": {"mode": "demo", "simulated": True}
-    }
-
     query_repo.create_answer(
         query_id=query_id,
         answer_text=answer_text,
