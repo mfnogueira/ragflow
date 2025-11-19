@@ -123,8 +123,11 @@ class QueryResultORM(Base):
     query_id = Column(PG_UUID(as_uuid=True), ForeignKey("queries.id"), nullable=False, index=True)
     chunk_id = Column(PG_UUID(as_uuid=True), nullable=False)  # Reference to chunk (not FK)
     similarity_score = Column(Float, nullable=False)
-    rank = Column(Integer, nullable=False)
+    relevance_score = Column(Float, nullable=False)  # Same as similarity_score (required by DB)
+    reranking_score = Column(Float, nullable=True)  # Optional reranking score
+    rank = Column("rank_position", Integer, nullable=False)  # Maps to rank_position column
     retrieved_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    metadata_match_flags = Column(JSON, nullable=False, default=dict)  # Metadata matching flags
 
     # Relationships
     query = relationship("QueryORM", back_populates="query_results")
