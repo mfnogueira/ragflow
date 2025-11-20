@@ -78,27 +78,52 @@ Edite o arquivo `.env` e configure:
 # Health check
 curl http://localhost:8000/health/
 
-# Submeter query assíncrona
+# Opção 1: Query SÍNCRONA (resposta imediata, aguarda processamento)
+# Recomendado para integrações que esperam resposta direta
+curl --location 'http://localhost:8000/api/v1/query/sync' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "question": "Quais são os principais problemas nos reviews?"
+  }'
+
+# Opção 2: Query ASSÍNCRONA (aceita query, processa em background)
+# Recomendado para batch processing ou alta concorrência
 curl --location 'http://localhost:8000/api/v1/query/async' \
   --header 'Content-Type: application/json' \
   --data '{
     "question": "Quais são os principais motivos de avaliações negativas?"
   }'
 
-# Verificar resultado (substitua {query_id} pelo ID retornado acima)
+# Verificar resultado da query assíncrona (substitua {query_id} pelo ID retornado)
 curl http://localhost:8000/api/v1/query/{query_id}
 ```
 
-**Exemplo de resposta completa:**
+**Exemplo de resposta `/query/sync` (200 OK):**
+```json
+{
+  "query_id": "c4ed148a-90af-4f43-b33a-6ca887824516",
+  "question": "Quais são os principais problemas nos reviews?",
+  "status": "completed",
+  "answer": "Os principais problemas destacados nas avaliações incluem:\n\n1. **Problemas na entrega**: Avaliações na categoria móveis mencionam atrasos significativos na entrega...",
+  "confidence_score": 0.576,
+  "sources": [
+    {
+      "chunk_id": "30a0c86d-9cad-450d-ac5d-ce961a75ca2f",
+      "similarity_score": 0.432,
+      "rank": 1
+    }
+  ],
+  "created_at": "2025-11-20T17:08:37.126177+00:00",
+  "completed_at": "2025-11-20T17:08:58.238159"
+}
+```
+
+**Exemplo de resposta `/query/async` (202 Accepted):**
 ```json
 {
   "query_id": "583db1ab-69f9-44e5-b2ef-840d86ad9aed",
-  "question": "Quais são os principais motivos de avaliações negativas?",
-  "status": "completed",
-  "answer": "Os principais motivos de avaliações negativas incluem...",
-  "confidence_score": 0.577,
-  "sources": [...],
-  "created_at": "2025-11-20T12:45:17.871122+00:00"
+  "status": "accepted",
+  "message": "Query accepted for processing. Use GET /api/v1/query/{id} to check status."
 }
 ```
 
@@ -242,8 +267,8 @@ ragFlow/
 - `GET /health/metrics` - Métricas do sistema
 
 ### Queries
-- `POST /api/v1/query` - Query síncrona
-- `POST /api/v1/query/async` - Query assíncrona (usa workers)
+- `POST /api/v1/query/sync` - Query síncrona (retorna resposta completa)
+- `POST /api/v1/query/async` - Query assíncrona (usa workers, requer polling)
 - `GET /api/v1/query/{id}` - Status e resultado da query
 - `GET /api/v1/queries` - Listar queries
 
@@ -327,11 +352,17 @@ curl http://localhost:8000/api/v1/queries?limit=5
 ### Testes com Scripts Python
 
 ```bash
-# Verificar implementação
-python scripts/check_implementation.py
+# Testar endpoint síncrono
+python tests/test_sync_endpoint.py
+
+# Testar todos os serviços async
+python tests/test_async_validation.py
 
 # Testar conexão com banco
 python tests/test_database_schema.py
+
+# Verificar implementação
+python scripts/check_implementation.py
 ```
 
 ## 📊 Dados de Teste
