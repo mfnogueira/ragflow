@@ -1,9 +1,11 @@
 """Retrieval Service for semantic search using Qdrant and PostgreSQL."""
 
+import asyncio
+from functools import partial
 from typing import List, Dict, Any
 from uuid import UUID
 
-from qdrant_client import QdrantClient
+from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import ScoredPoint
 from sqlalchemy.orm import Session
 
@@ -64,7 +66,7 @@ class RetrievalService:
         Args:
             db: Optional database session (for testing)
         """
-        self.qdrant_client = QdrantClient(
+        self.qdrant_client = AsyncQdrantClient(
             url=settings.qdrant_url.replace(":6333", ""),
             api_key=settings.qdrant_api_key,
             timeout=settings.qdrant_timeout,
@@ -72,7 +74,7 @@ class RetrievalService:
         self.db = db
         logger.info("RetrievalService initialized")
 
-    def retrieve(
+    async def retrieve(
         self,
         query_vector: List[float],
         collection: str = "olist_reviews",
@@ -100,7 +102,7 @@ class RetrievalService:
             )
 
             # Search Qdrant
-            search_results = self._search_qdrant(
+            search_results = await self._search_qdrant(
                 query_vector=query_vector,
                 collection=collection,
                 top_k=top_k,
@@ -125,7 +127,7 @@ class RetrievalService:
                 return []
 
             # Fetch chunk details from PostgreSQL
-            retrieval_results = self._enrich_with_chunk_data(
+            retrieval_results = await self._enrich_with_chunk_data(
                 filtered_results, collection
             )
 
@@ -136,7 +138,7 @@ class RetrievalService:
             logger.error(f"Retrieval failed: {e}")
             raise RetrievalError(f"Failed to retrieve chunks: {e}")
 
-    def _search_qdrant(
+    async def _search_qdrant(
         self,
         query_vector: List[float],
         collection: str,
@@ -154,7 +156,7 @@ class RetrievalService:
             List of ScoredPoint results from Qdrant
         """
         try:
-            results = self.qdrant_client.query_points(
+            results = await self.qdrant_client.query_points(
                 collection_name=collection,
                 query=query_vector,
                 limit=top_k,
@@ -167,7 +169,7 @@ class RetrievalService:
             logger.error(f"Qdrant search failed: {e}")
             raise RetrievalError(f"Qdrant search error: {e}")
 
-    def _enrich_with_chunk_data(
+    async def _enrich_with_chunk_data(
         self,
         scored_points: List[ScoredPoint],
         collection: str,
@@ -182,16 +184,29 @@ class RetrievalService:
         Returns:
             List of RetrievalResult objects with full chunk data
         """
-        results = []
-
         # Get database session
         if self.db:
-            # Use provided session
-            return self._fetch_chunks_from_db(self.db, scored_points)
+            # Use provided session (run in threadpool)
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(
+                None,
+                partial(self._fetch_chunks_from_db, self.db, scored_points)
+            )
         else:
-            # Create new session with context manager
-            with get_db_context() as db:
-                return self._fetch_chunks_from_db(db, scored_points)
+            # Create new session with context manager (run in threadpool)
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(
+                None,
+                partial(self._fetch_chunks_from_db_with_context, scored_points)
+            )
+
+    def _fetch_chunks_from_db_with_context(
+        self,
+        scored_points: List[ScoredPoint]
+    ) -> List[RetrievalResult]:
+        """Helper to fetch chunks with db context."""
+        with get_db_context() as db:
+            return self._fetch_chunks_from_db(db, scored_points)
 
     def _fetch_chunks_from_db(
         self,
@@ -239,7 +254,7 @@ class RetrievalService:
 
         return results
 
-    def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> Dict[str, Any]:
         """
         Check if Qdrant is accessible.
 
@@ -247,7 +262,7 @@ class RetrievalService:
             Health check status
         """
         try:
-            collections = self.qdrant_client.get_collections()
+            collections = await self.qdrant_client.get_collections()
             return {
                 "status": "healthy",
                 "collections": [c.name for c in collections.collections],
