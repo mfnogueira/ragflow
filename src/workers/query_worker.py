@@ -43,7 +43,6 @@ class QueryWorker(BaseWorker):
         super().__init__(
             queue_name=queue_name,
             prefetch_count=settings.query_concurrency,
-            auto_ack=False,
         )
 
         # Initialize services
