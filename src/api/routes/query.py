@@ -72,41 +72,207 @@ class AsyncQueryResponse(BaseModel):
     message: str
 
 
-@router.post("/query", response_model=QueryResponse, status_code=status.HTTP_200_OK)
+@router.post("/query/sync", response_model=QueryResponse, status_code=status.HTTP_200_OK)
 async def create_query_sync(
     request: QueryRequest,
     db: Session = Depends(get_db),
 ) -> QueryResponse:
     """
-    Synchronous query endpoint.
+    Synchronous query endpoint - Executa pipeline RAG completo.
 
-    Creates a query and waits for the answer (blocking).
-    Use for real-time interactions where immediate response is needed.
+    Processa a query completamente e retorna a resposta final.
+    Usa este endpoint quando o sistema integrado espera resposta imediata.
 
-    **Note**: This endpoint is a placeholder for MVP.
-    In production, implement proper async handling with WebSocket or polling.
+    **Atenção**: Esta requisição pode levar 3-10 segundos para completar,
+    pois executa todo o pipeline RAG (validação, embedding, retrieval, geração).
+
+    Args:
+        request: QueryRequest com a pergunta e parâmetros
+        db: Database session
+
+    Returns:
+        QueryResponse com resposta completa e fontes
+
+    Raises:
+        HTTPException 400: Query inválida (guardrails)
+        HTTPException 404: Nenhum documento relevante encontrado
+        HTTPException 500: Erro interno no processamento
     """
-    logger.info(f"Received synchronous query: {request.question[:50]}...")
+    from src.services.guardrails_service import get_guardrails_service
+    from src.services.embedding_service import get_embedding_service
+    from src.services.retrieval_service import get_retrieval_service
+    from src.services.generation_service import get_generation_service
+    from src.models.orm import AnswerORM, QueryResultORM
+    from uuid import UUID
+
+    logger.info(f"[SYNC] Received query: {request.question[:50]}...")
+
+    # Initialize services
+    guardrails = get_guardrails_service()
+    embedding = get_embedding_service()
+    retrieval = get_retrieval_service()
+    generation = get_generation_service()
 
     # Create query in database
     query_repo = QueryRepository(db)
-
     query_id = str(uuid4())
-    query = query_repo.create(
-        query_id=query_id,
-        question=request.question,
-        collection=request.collection,
-        max_chunks=request.max_chunks,
-    )
 
-    # For MVP: Return pending status
-    # In production: Implement proper synchronous flow with timeout
-    return QueryResponse(
-        query_id=str(query.id),
-        question=query.query_text,
-        status=query.status,
-        created_at=query.submitted_at.isoformat(),
-    )
+    try:
+        # Create query record
+        query = query_repo.create(
+            query_id=query_id,
+            question=request.question,
+            collection=request.collection,
+            max_chunks=request.max_chunks,
+        )
+
+        # Update to processing
+        query_repo.update_query_status(UUID(query_id), ProcessingStatus.PROCESSING)
+
+        # Step 1: Validate with guardrails
+        logger.info(f"[SYNC][{query_id}] Step 1: Validating query...")
+        validation_result = await guardrails.validate_query(request.question)
+
+        if not validation_result.is_valid:
+            logger.warning(f"[SYNC][{query_id}] Validation failed: {validation_result.reason}")
+            query_repo.update_query_status(UUID(query_id), ProcessingStatus.FAILED)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Query validation failed: {validation_result.reason}",
+            )
+
+        sanitized_question = validation_result.sanitized_input
+        logger.info(f"[SYNC][{query_id}] ✓ Query validated")
+
+        # Step 2: Generate embedding
+        logger.info(f"[SYNC][{query_id}] Step 2: Generating embedding...")
+        query_embedding = await embedding.generate_embedding(sanitized_question)
+        logger.info(f"[SYNC][{query_id}] ✓ Embedding generated (dim={len(query_embedding)})")
+
+        # Step 3: Retrieve relevant chunks
+        logger.info(f"[SYNC][{query_id}] Step 3: Retrieving chunks...")
+        retrieval_results = await retrieval.retrieve(
+            query_vector=query_embedding,
+            collection=request.collection or settings.default_collection,
+            top_k=request.max_chunks or settings.max_chunks_per_query,
+            min_score=0.0,
+        )
+
+        if not retrieval_results:
+            logger.warning(f"[SYNC][{query_id}] No chunks retrieved")
+            query_repo.update_query_status(UUID(query_id), ProcessingStatus.FAILED)
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No relevant documents found for this query",
+            )
+
+        logger.info(
+            f"[SYNC][{query_id}] ✓ Retrieved {len(retrieval_results)} chunks "
+            f"(scores: {retrieval_results[0].similarity_score:.3f} - {retrieval_results[-1].similarity_score:.3f})"
+        )
+
+        # Step 4: Generate answer
+        logger.info(f"[SYNC][{query_id}] Step 4: Generating answer...")
+        generation_result = await generation.generate_answer(
+            question=sanitized_question,
+            retrieval_results=retrieval_results,
+        )
+
+        logger.info(
+            f"[SYNC][{query_id}] ✓ Answer generated "
+            f"(confidence={generation_result.confidence_score:.3f}, length={len(generation_result.answer)})"
+        )
+
+        # Step 5: Save results to database
+        logger.info(f"[SYNC][{query_id}] Step 5: Saving results...")
+
+        # Save answer
+        answer_id = uuid4()
+        answer = AnswerORM(
+            id=answer_id,
+            query_id=UUID(query_id),
+            answer_text=generation_result.answer,
+            confidence_score=generation_result.confidence_score,
+            model_name=generation_result.model,
+            prompt_tokens=generation_result.prompt_tokens,
+            completion_tokens=generation_result.completion_tokens,
+            generated_at=datetime.utcnow(),
+            retrieval_latency_ms=0.0,
+            generation_latency_ms=0.0,
+            total_latency_ms=0.0,
+            cache_hit=False,
+            validation_status='passed',
+            escalation_flag=False,
+            redaction_flag=False,
+            extra_metadata={
+                "sources_used": generation_result.sources_used,
+                "temperature": settings.llm_temperature,
+                "sync_mode": True,
+            },
+        )
+        db.add(answer)
+
+        # Save query results (retrieved chunks)
+        for result in retrieval_results:
+            query_result = QueryResultORM(
+                id=uuid4(),
+                query_id=UUID(query_id),
+                chunk_id=UUID(result.chunk_id),
+                similarity_score=result.similarity_score,
+                relevance_score=result.similarity_score,
+                reranking_score=None,
+                rank=result.rank,
+                retrieved_at=datetime.utcnow(),
+                metadata_match_flags={},
+            )
+            db.add(query_result)
+
+        # Commit all changes
+        db.commit()
+
+        # Update query status to completed
+        query_repo.update_query_status(UUID(query_id), ProcessingStatus.COMPLETED)
+
+        logger.info(f"[SYNC][{query_id}] ✓ Query completed successfully")
+
+        # Prepare sources for response
+        sources = [
+            {
+                "chunk_id": str(result.chunk_id),
+                "similarity_score": float(result.similarity_score),
+                "rank": result.rank,
+            }
+            for result in retrieval_results
+        ]
+
+        return QueryResponse(
+            query_id=query_id,
+            question=request.question,
+            status=ProcessingStatus.COMPLETED,
+            answer=generation_result.answer,
+            confidence_score=generation_result.confidence_score,
+            sources=sources,
+            created_at=query.submitted_at.isoformat(),
+            completed_at=datetime.utcnow().isoformat(),
+        )
+
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+
+    except Exception as e:
+        logger.error(f"[SYNC][{query_id}] Processing failed: {e}", exc_info=True)
+
+        # Update status to failed
+        try:
+            query_repo.update_query_status(UUID(query_id), ProcessingStatus.FAILED)
+        except Exception as db_error:
+            logger.error(f"Failed to update query status: {db_error}")
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal error processing query: {str(e)}",
+        )
 
 
 @router.post(
