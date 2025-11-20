@@ -17,58 +17,89 @@ O RagFlow permite fazer perguntas em linguagem natural sobre reviews de e-commer
 
 ## 🚀 Início Rápido
 
-**Pré-requisitos**: Python 3.11+
+### Opção 1: Docker (Recomendado) 🐳
 
-### 1. Clone e Configuração
+**Pré-requisitos**: Docker e Docker Compose
 
 ```bash
+# Clone o repositório
+git clone https://github.com/mfnogueira/ragflow.git
+cd ragflow
+git checkout 001-rag-qa-system
+
+# Configure as variáveis de ambiente
+cp .env.example .env
+# Edite o .env com suas credenciais
+
+# Construa e inicie os containers
+docker-compose up --build -d
+
+# Verifique os logs
+docker-compose logs -f
+```
+
+A API estará disponível em: http://localhost:8000
+
+### Opção 2: Instalação Local
+
+**Pré-requisitos**: Python 3.11+
+
+```bash
+# Clone e configuração
 git clone https://github.com/mfnogueira/ragflow.git
 cd ragflow
 git checkout 001-rag-qa-system
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-```
 
-### 2. Configurar Variáveis de Ambiente
-
-```bash
+# Configure as variáveis de ambiente
 cp .env.example .env
-```
+# Edite o .env com suas credenciais
 
-Edite o arquivo `.env` e configure:
-- `OPENAI_API_KEY` - Sua chave da OpenAI
-- `SUPABASE_DATABASE_URL` - URL do banco Supabase
-- `CLOUDAMQP_URL` - URL do RabbitMQ (CloudAMQP)
-- `QDRANT_URL` e `QDRANT_API_KEY` - Credenciais do Qdrant Cloud
-
-### 3. Executar Migrations do Banco de Dados
-
-```bash
+# Execute migrations do banco de dados
 alembic upgrade head
-```
 
-### 4. Iniciar a API
-
-```bash
+# Inicie a API
 uvicorn src.api.app:app --reload --host 0.0.0.0 --port 8000
 ```
 
-A API estará disponível em: http://localhost:8000
+### Variáveis de Ambiente Necessárias
 
-### 5. Testar os Endpoints
+Edite o arquivo `.env` e configure:
+- `OPENAI_API_KEY` - Sua chave da OpenAI
+- `DATABASE_URL` - URL do banco Supabase PostgreSQL
+- `RABBITMQ_URL` - URL do RabbitMQ (CloudAMQP)
+- `QDRANT_URL` e `QDRANT_API_KEY` - Credenciais do Qdrant Cloud
+
+### Testar a API
 
 ```bash
 # Health check
 curl http://localhost:8000/health/
 
-# Listar coleções
-curl http://localhost:8000/api/v1/collections
-
 # Submeter query assíncrona
-curl -X POST http://localhost:8000/api/v1/query/async \
-  -H "Content-Type: application/json" \
-  -d '{"question": "Quais são os principais motivos de avaliações negativas?"}'
+curl --location 'http://localhost:8000/api/v1/query/async' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "question": "Quais são os principais motivos de avaliações negativas?"
+  }'
+
+# Verificar resultado (substitua {query_id} pelo ID retornado acima)
+curl http://localhost:8000/api/v1/query/{query_id}
+```
+
+**Exemplo de resposta completa:**
+```json
+{
+  "query_id": "583db1ab-69f9-44e5-b2ef-840d86ad9aed",
+  "question": "Quais são os principais motivos de avaliações negativas?",
+  "status": "completed",
+  "answer": "Os principais motivos de avaliações negativas incluem...",
+  "confidence_score": 0.577,
+  "sources": [...],
+  "created_at": "2025-11-20T12:45:17.871122+00:00"
+}
 ```
 
 ## 🏗️ Arquitetura
@@ -102,6 +133,69 @@ curl -X POST http://localhost:8000/api/v1/query/async \
 - **SQLAlchemy** - ORM para acesso ao banco de dados
 - **Pydantic** - Validação de dados e configuração
 - **Alembic** - Migrations de banco de dados
+- **Docker** - Containerização da aplicação
+
+## 🐳 Docker
+
+O projeto utiliza Docker para containerização, facilitando o deployment e garantindo consistência entre ambientes.
+
+### Dockerfile Multi-Stage
+
+O `Dockerfile` usa uma build multi-stage para otimizar o tamanho da imagem:
+
+1. **Stage 1 (Builder)**: Instala dependências de build e pacotes Python
+2. **Stage 2 (Runtime)**: Cria imagem mínima de produção
+   - Copia apenas dependências necessárias
+   - Cria usuário não-root para segurança
+   - Expõe porta 8000
+
+### Docker Compose
+
+O `docker-compose.yml` orquestra dois serviços:
+
+**Serviço `api`**:
+- Container: `ragflow-api`
+- Porta: `8000:8000`
+- Comando: `uvicorn src.api.app:app --host 0.0.0.0 --port 8000`
+- Healthcheck: Verifica `/health` a cada 30s
+
+**Serviço `query-worker`**:
+- Container: `ragflow-query-worker`
+- Processa queries da fila RabbitMQ
+- Comando: `python -m src.workers.query_worker`
+- Escala: Configurável via `QUERY_CONCURRENCY`
+
+### Comandos Docker Úteis
+
+```bash
+# Construir e iniciar
+docker-compose up --build -d
+
+# Ver logs em tempo real
+docker-compose logs -f
+
+# Ver logs de um serviço específico
+docker-compose logs -f api
+docker-compose logs -f query-worker
+
+# Parar containers
+docker-compose down
+
+# Parar e remover volumes
+docker-compose down -v
+
+# Reconstruir imagens
+docker-compose build --no-cache
+
+# Verificar status dos containers
+docker-compose ps
+
+# Entrar no container da API
+docker-compose exec api bash
+
+# Ver uso de recursos
+docker stats
+```
 
 ## 📁 Estrutura do Projeto
 
@@ -194,15 +288,50 @@ ragFlow/
 
 ## 🧪 Testes
 
+### Testar Endpoints da API
+
+```bash
+# 1. Health check básico
+curl http://localhost:8000/health/
+
+# 2. Health check com verificação de dependências
+curl http://localhost:8000/health/ready
+
+# 3. Ver métricas do sistema
+curl http://localhost:8000/health/metrics
+
+# 4. Listar coleções disponíveis
+curl http://localhost:8000/api/v1/collections
+
+# 5. Submeter query assíncrona (RAG completo)
+curl --location 'http://localhost:8000/api/v1/query/async' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "question": "Quais são os principais motivos de avaliações negativas?"
+  }'
+
+# Resposta esperada:
+# {
+#   "query_id": "abc-123-...",
+#   "status": "accepted",
+#   "message": "Query accepted for processing. Use GET /api/v1/query/{id} to check status."
+# }
+
+# 6. Consultar resultado da query (aguarde ~30-60 segundos)
+curl http://localhost:8000/api/v1/query/{query_id}
+
+# 7. Listar queries recentes
+curl http://localhost:8000/api/v1/queries?limit=5
+```
+
+### Testes com Scripts Python
+
 ```bash
 # Verificar implementação
 python scripts/check_implementation.py
 
 # Testar conexão com banco
 python tests/test_database_schema.py
-
-# Testar endpoints da API (requer servidor rodando)
-curl http://localhost:8000/health/ready
 ```
 
 ## 📊 Dados de Teste
