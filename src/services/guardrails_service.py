@@ -69,7 +69,7 @@ class GuardrailsService:
 
         logger.info("GuardrailsService initialized")
 
-    def validate_query(self, query: str) -> ValidationResult:
+    async def validate_query(self, query: str) -> ValidationResult:
         """
         Validate a user query for safety and correctness.
 
