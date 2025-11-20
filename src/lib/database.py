@@ -20,11 +20,13 @@ Base = declarative_base()
 # Using NullPool for async thread pool compatibility
 # This prevents prepared statement errors when using asyncio.run_in_executor()
 # NullPool creates a new connection for each request, avoiding thread-safety issues
+# prepare_threshold=None disables prepared statements in psycopg3
 engine = create_engine(
     settings.database_url,
     poolclass=NullPool,  # Disable connection pooling for thread pool compatibility
     pool_pre_ping=True,  # Verify connections before using
     echo=settings.debug,  # Log SQL queries in debug mode
+    connect_args={"prepare_threshold": None},  # Disable prepared statements (psycopg3)
 )
 
 # Session factory
