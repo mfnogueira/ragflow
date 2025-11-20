@@ -2,7 +2,7 @@
 
 from typing import List
 
-from openai import OpenAI, OpenAIError
+from openai import AsyncOpenAI, OpenAIError
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from src.lib.config import settings
@@ -17,7 +17,7 @@ class EmbeddingService:
 
     def __init__(self):
         """Initialize the embedding service."""
-        self.client = OpenAI(api_key=settings.openai_api_key)
+        self.client = AsyncOpenAI(api_key=settings.openai_api_key)
         self.model = settings.openai_embedding_model
         self.dimension = settings.vector_dimension
         logger.info(f"EmbeddingService initialized (model={self.model}, dim={self.dimension})")
@@ -27,7 +27,7 @@ class EmbeddingService:
         wait=wait_exponential(multiplier=1, min=2, max=10),
         reraise=True,
     )
-    def generate_embedding(self, text: str) -> List[float]:
+    async def generate_embedding(self, text: str) -> List[float]:
         """
         Generate embedding for a single text.
 
@@ -46,7 +46,7 @@ class EmbeddingService:
         try:
             logger.debug(f"Generating embedding for text (length={len(text)})")
 
-            response = self.client.embeddings.create(
+            response = await self.client.embeddings.create(
                 model=self.model,
                 input=text,
             )
@@ -74,7 +74,7 @@ class EmbeddingService:
         wait=wait_exponential(multiplier=1, min=2, max=10),
         reraise=True,
     )
-    def generate_embeddings_batch(self, texts: List[str]) -> List[List[float]]:
+    async def generate_embeddings_batch(self, texts: List[str]) -> List[List[float]]:
         """
         Generate embeddings for multiple texts in a single API call.
 
@@ -103,7 +103,7 @@ class EmbeddingService:
         try:
             logger.debug(f"Generating embeddings for {len(valid_texts)} texts")
 
-            response = self.client.embeddings.create(
+            response = await self.client.embeddings.create(
                 model=self.model,
                 input=valid_texts,
             )
