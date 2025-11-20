@@ -95,3 +95,20 @@ NEXT_STEPS.md
 # Auxiliary scripts (local development)
 scripts/start_api.py
 scripts/start_api_8001.py
+
+# Development and debugging scripts (root directory)
+check_*.py
+test_*.py
+add_*.py
+find_*.py
+republish_*.py
+reset_*.py
+purge_*.py
+full_reset*.py
+kill_all_python.ps1
+run_api.py
+*.ps1
+
+# Temporary files
+query_ids.txt
+nul

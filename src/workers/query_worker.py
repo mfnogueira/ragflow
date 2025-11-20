@@ -54,7 +54,7 @@ class QueryWorker(BaseWorker):
 
         logger.info("Query Worker initialized with all services")
 
-    def process_message(self, message: Dict[str, Any]) -> Any:
+    async def process_message(self, message: Dict[str, Any]) -> Any:
         """
         Process a query message through the RAG pipeline.
 
@@ -95,7 +95,7 @@ class QueryWorker(BaseWorker):
 
                 # Step 1: Validate with guardrails
                 logger.info(f"[{query_id}] Step 1: Validating query...")
-                validation_result = self.guardrails_service.validate_query(question)
+                validation_result = await self.guardrails_service.validate_query(question)
 
                 if not validation_result.is_valid:
                     logger.warning(
@@ -115,14 +115,14 @@ class QueryWorker(BaseWorker):
 
                 # Step 2: Generate query embedding
                 logger.info(f"[{query_id}] Step 2: Generating embedding...")
-                query_embedding = self.embedding_service.generate_embedding(
+                query_embedding = await self.embedding_service.generate_embedding(
                     sanitized_question
                 )
                 logger.info(f"[{query_id}] ✓ Embedding generated (dim={len(query_embedding)})")
 
                 # Step 3: Retrieve relevant chunks
                 logger.info(f"[{query_id}] Step 3: Retrieving chunks (top_k={max_chunks})...")
-                retrieval_results = self.retrieval_service.retrieve(
+                retrieval_results = await self.retrieval_service.retrieve(
                     query_vector=query_embedding,
                     collection=collection,
                     top_k=max_chunks,
@@ -146,7 +146,7 @@ class QueryWorker(BaseWorker):
 
                 # Step 4: Generate answer with LLM
                 logger.info(f"[{query_id}] Step 4: Generating answer...")
-                generation_result = self.generation_service.generate_answer(
+                generation_result = await self.generation_service.generate_answer(
                     question=sanitized_question,
                     retrieval_results=retrieval_results,
                 )
@@ -237,10 +237,10 @@ class QueryWorker(BaseWorker):
                 raise
 
 
-def main():
+async def main():
     """Run the Query Worker."""
     logger.info("="*60)
-    logger.info("QUERY WORKER")
+    logger.info("QUERY WORKER (ASYNC)")
     logger.info("="*60)
     logger.info(f"Environment: {settings.environment}")
     logger.info(f"Collection: {settings.default_collection}")
@@ -251,14 +251,15 @@ def main():
     worker = QueryWorker()
 
     try:
-        worker.start()
+        await worker.start()
     except KeyboardInterrupt:
         logger.info("Received keyboard interrupt, shutting down...")
-        worker.stop()
+        await worker.stop()
     except Exception as e:
         logger.error(f"Worker crashed: {e}", exc_info=True)
         raise
 
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    asyncio.run(main())
