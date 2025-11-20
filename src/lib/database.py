@@ -6,6 +6,7 @@ from typing import Generator
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import NullPool
 
 from .config import settings
 from .logger import get_logger
@@ -16,12 +17,14 @@ logger = get_logger(__name__)
 Base = declarative_base()
 
 # Engine configuration
+# Using NullPool for async thread pool compatibility
+# This prevents prepared statement errors when using asyncio.run_in_executor()
 engine = create_engine(
     settings.database_url,
-    pool_size=settings.db_pool_size,
-    max_overflow=settings.db_max_overflow,
+    poolclass=NullPool,  # Disable connection pooling for thread pool compatibility
     pool_pre_ping=True,  # Verify connections before using
     echo=settings.debug,  # Log SQL queries in debug mode
+    connect_args={"prepared_statement_cache_size": 0},  # Disable prepared statements
 )
 
 # Session factory
