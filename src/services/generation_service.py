@@ -2,7 +2,7 @@
 
 from typing import List, Dict, Any
 
-from openai import OpenAI, OpenAIError
+from openai import AsyncOpenAI, OpenAIError
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from src.lib.config import settings
@@ -60,7 +60,7 @@ class GenerationService:
 
     def __init__(self):
         """Initialize the generation service."""
-        self.client = OpenAI(api_key=settings.openai_api_key)
+        self.client = AsyncOpenAI(api_key=settings.openai_api_key)
         self.model = settings.openai_model
         self.temperature = settings.llm_temperature
         self.max_tokens = settings.max_answer_length
@@ -178,7 +178,7 @@ Resposta:"""
         wait=wait_exponential(multiplier=1, min=2, max=10),
         reraise=True,
     )
-    def generate_answer(
+    async def generate_answer(
         self,
         question: str,
         retrieval_results: List[RetrievalResult],
@@ -214,7 +214,7 @@ Resposta:"""
             user_prompt = self._build_user_prompt(question, retrieval_results)
 
             # Generate answer
-            response = self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": system_prompt},
