@@ -59,12 +59,55 @@ class GuardrailsService:
 
         # Patterns for prompt injection attempts
         self.prompt_injection_patterns = [
-            r"(ignore.*previous.*instructions?)",
-            r"(forget.*previous.*instructions?)",
+            # Classic jailbreak attempts
+            r"(ignore.*(?:previous|earlier|all|your).*(?:instructions?|rules?|directions?))",
+            r"(forget.*(?:previous|earlier|all|your).*(?:instructions?|rules?|directions?))",
+            r"(disregard.*(?:above|previous|earlier|all|your).*(?:instructions?|rules?|directions?))",
+            r"(override.*(?:previous|earlier|all|your).*(?:instructions?|rules?|directions?))",
+
+            # Role manipulation
             r"(you are now)",
+            r"(act as)",
+            r"(pretend (?:to be|you are))",
+            r"(roleplay)",
+            r"(simulate)",
+
+            # System prompt extraction attempts
+            r"((?:show|tell|reveal|display|print).*(?:your|the).*(?:prompt|instructions?|rules?|system prompt|guidelines?))",
+            r"(what (?:are|is) your (?:prompt|instructions?|rules?|guidelines?))",
+            r"(repeat (?:your|the) (?:prompt|instructions?|above))",
+            r"(output (?:your|the) (?:prompt|instructions?))",
+
+            # Model/system information extraction
+            r"((?:what|which) (?:model|version|llm) (?:are you|is this|do you use))",
+            r"(are you (?:gpt|claude|chatgpt|openai))",
+            r"((?:what|which) (?:model|version) of (?:gpt|claude|openai|ai))",
+            r"((?:what|which) version (?:are you|is this).*(?:using|running))",
+            r"(tell me about (?:your model|yourself|how you work))",
+
+            # Delimiter/formatting injection
             r"(system:)",
             r"(assistant:)",
-            r"(disregard.*above)",
+            r"(user:)",
+            r"(\[system\])",
+            r"(\[assistant\])",
+            r"(```system)",
+
+            # Escape attempts
+            r"(</.*>.*<.*>)",  # XML/HTML tag injection
+            r"(\{.*system.*\})",  # JSON injection attempts
+
+            # DAN (Do Anything Now) style attacks
+            r"(do anything now)",
+            r"(DAN mode)",
+            r"(jailbreak)",
+            r"(dev mode)",
+            r"(developer mode)",
+
+            # Instruction override attempts
+            r"(new (?:instructions?|task|objective))",
+            r"(instead,? (?:do|respond|answer))",
+            r"(actually,? (?:your real|the real) (?:task|purpose|job))",
         ]
 
         logger.info("GuardrailsService initialized")
