@@ -93,6 +93,7 @@ specs/
 NEXT_STEPS.md
 DOCKER.md
 API_EXAMPLES.md
+GUARDRAILS_IMPROVEMENTS.md
 requirements-dev.txt
 *.postman_collection.json
 
