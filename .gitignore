@@ -117,3 +117,6 @@ run_api.py
 # Temporary files
 query_ids.txt
 nul
+
+# Tests
+tests/
